@@ -12,4 +12,7 @@ You can find his explanations for the initial project on his blog:
 http://www.olofsimren.com/record-deletion-tool-for-dynamics-nav-2015/
 
 ## Images
-![Record Deletion Page](images/RecordDeletion.png)
+![Extension Page](images/ExtensionPage.png)
+![Tell Me](images/TellMe.png)
+![Overview Records](images/OverViewRecords.png)
+
