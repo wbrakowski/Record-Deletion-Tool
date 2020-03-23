@@ -14,5 +14,5 @@ http://www.olofsimren.com/record-deletion-tool-for-dynamics-nav-2015/
 ## Images
 ![Extension Page](images/ExtensionPage.png)
 ![Tell Me](images/TellMe.png)
-![Overview Records](images/OverViewRecords.png)
+![Overview Records](images/OverviewRecords.png)
 
