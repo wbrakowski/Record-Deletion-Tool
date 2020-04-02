@@ -1,4 +1,4 @@
-page 50100 "Record Deletion"
+page 50100 "CCO Record Deletion"
 {
 
     PageType = List;
@@ -137,6 +137,6 @@ page 50100 "Record Deletion"
 
     }
     var
-        RecordDeletionMgt: Codeunit "Record Deletion Mgt.";
+        RecordDeletionMgt: Codeunit "CCO Record Deletion Mgt.";
 
 }

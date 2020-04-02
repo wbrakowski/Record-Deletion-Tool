@@ -1,4 +1,4 @@
-codeunit 50100 "Record Deletion Mgt."
+codeunit 50100 "CCO Record Deletion Mgt."
 {
     procedure InsertUpdateTables();
     var
@@ -146,15 +146,15 @@ codeunit 50100 "Record Deletion Mgt."
         SetSuggestedTable(Database::"Item Register");
         SetSuggestedTable(Database::"Item Tracking Comment");
         SetSuggestedTable(Database::"Job Entry No.");
-        SetSuggestedTable(Database::"Job G/L Account Price");
-        SetSuggestedTable(Database::"Job Item Price");
+        // SetSuggestedTable(Database::"Job G/L Account Price");
+        // SetSuggestedTable(Database::"Job Item Price");
         SetSuggestedTable(Database::"Job Journal Line");
         SetSuggestedTable(Database::"Job Ledger Entry");
         SetSuggestedTable(Database::"Job Planning Line Invoice");
         SetSuggestedTable(Database::"Job Planning Line");
         SetSuggestedTable(Database::"Job Queue Log Entry");
         SetSuggestedTable(Database::"Job Register");
-        SetSuggestedTable(Database::"Job Resource Price");
+        // SetSuggestedTable(Database::"Job Resource Price");
         SetSuggestedTable(Database::"Job Task Dimension");
         SetSuggestedTable(Database::"Job Task");
         SetSuggestedTable(Database::"Job Task");

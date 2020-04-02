@@ -1,8 +1,8 @@
 {
-  "id": "a124e8e0-f55f-4a3e-b75b-494f6c8644fe",
-  "name": "NIRx Sandbox",
-  "publisher": "COSMO CONSULT GmbH",
-  "version": "3.0.0.0",
+  "id": "cafd90e7-34f2-4ff9-ae7e-ae1210bc1841",
+  "name": "Record-Deletion-Tool",
+  "publisher": "Default publisher",
+  "version": "1.0.0.0",
   "brief": "",
   "description": "",
   "privacyStatement": "",
@@ -12,22 +12,27 @@
   "logo": "",
   "dependencies": [
     {
-      "appId": "63ca2fa4-4f03-4f2b-a480-172fef340d3f",
+      "id": "63ca2fa4-4f03-4f2b-a480-172fef340d3f",
       "publisher": "Microsoft",
       "name": "System Application",
-      "version": "1.0.0.0"
+      "version": "16.0.0.0"
     },
     {
-      "appId": "437dbf0e-84ff-417a-965d-ed2bb9650972",
+      "id": "437dbf0e-84ff-417a-965d-ed2bb9650972",
       "publisher": "Microsoft",
       "name": "Base Application",
-      "version": "15.0.0.0"
+      "version": "16.0.0.0"
     }
   ],
   "screenshots": [],
-
-  "platform": "15.0.0.0",
-  "idRanges": [{"from": 50100, "to": 50400} ],
+  "platform": "16.0.0.0",
+  "idRanges": [
+    {
+      "from": 50100,
+      "to": 50149
+    }
+  ],
+  "contextSensitiveHelpUrl": "https://Record-Deletion-Tool.com/help/",
   "showMyCode": true,
-  "runtime": "4.0" 
+  "runtime": "5.0"
 }
