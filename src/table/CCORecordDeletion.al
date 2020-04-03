@@ -1,4 +1,4 @@
-table 50100 "Record Deletion"
+table 50100 "CCO Record Deletion"
 {
     DataClassification = ToBeClassified;
 
@@ -30,14 +30,14 @@ table 50100 "Record Deletion"
             Caption = 'No. of Table Relation Errors';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = Count ("Record Deletion Rel. Error" where("Table ID" = field("Table ID")));
+            CalcFormula = Count ("CCO Record Deletion Rel. Error" where("Table ID" = field("Table ID")));
         }
         field(30; "Delete Records"; Boolean)
         {
             Caption = 'Delete Records';
             DataClassification = ToBeClassified;
         }
-        field(40; "Company"; Text[30])
+        field(40; Company; Text[30])
         {
             Caption = 'Company';
             DataClassification = ToBeClassified;

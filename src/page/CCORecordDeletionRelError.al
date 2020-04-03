@@ -1,8 +1,8 @@
-page 50101 "Record Deletion Rel. Error"
+page 50101 "CCO Record Deletion Rel. Error"
 {
 
     PageType = List;
-    SourceTable = "Record Deletion Rel. Error";
+    SourceTable = "CCO Record Deletion Rel. Error";
     Caption = 'Record Deletion Rel. Error';
     ApplicationArea = All;
     UsageCategory = Lists;
@@ -18,7 +18,7 @@ page 50101 "Record Deletion Rel. Error"
                 {
                     ApplicationArea = All;
                 }
-                field(Error; Error)
+                field("Error"; Error)
                 {
                     ApplicationArea = All;
                 }

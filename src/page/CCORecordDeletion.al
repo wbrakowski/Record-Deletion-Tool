@@ -2,7 +2,7 @@ page 50100 "CCO Record Deletion"
 {
 
     PageType = List;
-    SourceTable = "Record Deletion";
+    SourceTable = "CCO Record Deletion";
     Caption = 'Record Deletion';
     ApplicationArea = All;
     UsageCategory = Lists;

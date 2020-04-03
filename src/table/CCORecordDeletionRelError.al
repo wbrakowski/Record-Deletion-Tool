@@ -1,8 +1,8 @@
-table 50101 "Record Deletion Rel. Error"
+table 50101 "CCO Record Deletion Rel. Error"
 {
     DataClassification = ToBeClassified;
-    LookupPageId = "Record Deletion Rel. Error";
-    DrillDownPageId = "Record Deletion Rel. Error";
+    LookupPageId = "CCO Record Deletion Rel. Error";
+    DrillDownPageId = "CCO Record Deletion Rel. Error";
     fields
     {
         field(1; "Table ID"; Integer)

@@ -2,7 +2,7 @@ codeunit 50100 "CCO Record Deletion Mgt."
 {
     procedure InsertUpdateTables();
     var
-        RecordDeletion: Record "Record Deletion";
+        RecordDeletion: Record "CCO Record Deletion";
         AllObjWithCaption: Record AllObjWithCaption;
     begin
         AllObjWithCaption.SetRange("Object Type", AllObjWithCaption."Object Type"::Table);
@@ -342,7 +342,7 @@ codeunit 50100 "CCO Record Deletion Mgt."
 
     procedure ClearRecordsToDelete();
     var
-        RecordDeletion: Record "Record Deletion";
+        RecordDeletion: Record "CCO Record Deletion";
     begin
         RecordDeletion.ModifyAll("Delete Records", false);
     end;
@@ -351,8 +351,8 @@ codeunit 50100 "CCO Record Deletion Mgt."
     var
         Window: Dialog;
         RecRef: RecordRef;
-        RecordDeletion: Record "Record Deletion";
-        RecordDeletionRelError: Record "Record Deletion Rel. Error";
+        RecordDeletion: Record "CCO Record Deletion";
+        RecordDeletionRelError: Record "CCO Record Deletion Rel. Error";
         DeleteRecordsQst: Label 'Delete Records?';
         DeletingRecordsTxt: Label 'Deleting Records!\Table: #1#######';
     begin
@@ -379,8 +379,8 @@ codeunit 50100 "CCO Record Deletion Mgt."
     procedure CheckTableRelations();
     var
         Window: Dialog;
-        RecordDeletion: Record "Record Deletion";
-        RecordDeletionRelError: Record "Record Deletion Rel. Error";
+        RecordDeletion: Record "CCO Record Deletion";
+        RecordDeletionRelError: Record "CCO Record Deletion Rel. Error";
         TableMetadata: Record "Table Metadata";
         RecRef: RecordRef;
         Field: Record Field;
@@ -458,14 +458,14 @@ codeunit 50100 "CCO Record Deletion Mgt."
         Window.Close();
     end;
 
-    procedure ViewRecords(RecordDeletion: Record "Record Deletion");
+    procedure ViewRecords(RecordDeletion: Record "CCO Record Deletion");
     begin
         Hyperlink(GetUrl(ClientType::Current, CompanyName, ObjectType::Table, RecordDeletion."Table ID"));
     end;
 
     procedure SetSuggestedTable(TableID: Integer);
     var
-        RecordDeletion: Record "Record Deletion";
+        RecordDeletion: Record "CCO Record Deletion";
     begin
         if RecordDeletion.Get(TableID) then begin
             RecordDeletion."Delete Records" := true;
