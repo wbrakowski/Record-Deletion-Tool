@@ -1,12 +1,11 @@
-codeunit 50100 "CCO Record Deletion Mgt."
+codeunit 50100 "Record Deletion Mgt."
 {
     procedure InsertUpdateTables();
     var
-        RecordDeletion: Record "CCO Record Deletion";
+        RecordDeletion: Record "Record Deletion";
         AllObjWithCaption: Record AllObjWithCaption;
     begin
         AllObjWithCaption.SetRange("Object Type", AllObjWithCaption."Object Type"::Table);
-        // TODO TEST
         // Do not include system tables
         AllObjWithCaption.SetFilter("Object ID", '< %1', 2000000001);
         if AllObjWithCaption.FindSet() then
@@ -15,7 +14,7 @@ codeunit 50100 "CCO Record Deletion Mgt."
                 RecordDeletion."Table ID" := AllObjWithCaption."Object ID";
                 RecordDeletion.Company := CompanyName;
                 if RecordDeletion.Insert() then;
-            until AllObjWithCaption.Next = 0;
+            until AllObjWithCaption.Next() = 0;
 
     end;
 
@@ -342,19 +341,19 @@ codeunit 50100 "CCO Record Deletion Mgt."
 
     procedure ClearRecordsToDelete();
     var
-        RecordDeletion: Record "CCO Record Deletion";
+        RecordDeletion: Record "Record Deletion";
     begin
         RecordDeletion.ModifyAll("Delete Records", false);
     end;
 
     procedure DeleteRecords();
     var
-        Window: Dialog;
+        RecordDeletion: Record "Record Deletion";
+        RecordDeletionRelError: Record "Record Deletion Rel. Error";
         RecRef: RecordRef;
-        RecordDeletion: Record "CCO Record Deletion";
-        RecordDeletionRelError: Record "CCO Record Deletion Rel. Error";
+        Window: Dialog;
         DeleteRecordsQst: Label 'Delete Records?';
-        DeletingRecordsTxt: Label 'Deleting Records!\Table: #1#######';
+        DeletingRecordsTxt: Label 'Deleting Records!\Table: #1#######', Comment = '%1 = Table ID';
     begin
         if not Confirm(DeleteRecordsQst, false) then
             exit;
@@ -371,29 +370,29 @@ codeunit 50100 "CCO Record Deletion Mgt."
                     RecordDeletionRelError.SetRange("Table ID", RecordDeletion."Table ID");
                     RecordDeletionRelError.DeleteAll();
                 end;
-            until RecordDeletion.Next = 0;
+            until RecordDeletion.Next() = 0;
 
         Window.Close();
     end;
 
     procedure CheckTableRelations();
     var
-        Window: Dialog;
-        RecordDeletion: Record "CCO Record Deletion";
-        RecordDeletionRelError: Record "CCO Record Deletion Rel. Error";
+        Field: Record Field;
+        Field2: Record Field;
+        KeyRec: Record "Key";
+        RecordDeletion: Record "Record Deletion";
+        RecordDeletionRelError: Record "Record Deletion Rel. Error";
         TableMetadata: Record "Table Metadata";
         RecRef: RecordRef;
-        Field: Record Field;
-        FieldRef: FieldRef;
         RecRef2: RecordRef;
+        FieldRef: FieldRef;
         FieldRef2: FieldRef;
-        Field2: Record Field;
-        EntryNo: Integer;
-        KeyRec: Record "Key";
         SkipCheck: Boolean;
-        CheckRelationsQst: Label 'Check Table Relations?';
-        CheckingRelationsTxt: Label 'Checking Relations Between Records!\Table: #1#######';
+        Window: Dialog;
+        EntryNo: Integer;
         NotExistsTxt: Label '%1 => %2 = ''%3'' does not exist in the ''%4'' table';
+        CheckRelationsQst: Label 'Check Table Relations?';
+        CheckingRelationsTxt: Label 'Checking Relations Between Records!\Table: #1#######', Comment = '%1 = Table ID';
     begin
         if not Confirm(CheckRelationsQst, false) then
             exit;
@@ -444,28 +443,28 @@ codeunit 50100 "CCO Record Deletion Mgt."
                                                 RecordDeletionRelError."Table ID" := RecRef.NUMBER;
                                                 RecordDeletionRelError."Entry No." := EntryNo;
                                                 RecordDeletionRelError."Field No." := FieldRef.NUMBER;
-                                                RecordDeletionRelError.Error := CopyStr(StrSubstNo(NotExistsTxt, Format(RecRef.GETPOSITION), Format(FieldRef2.NAME), Format(FieldRef.VALUE), Format(RecRef2.NAME)), 1, 250);
+                                                RecordDeletionRelError.Error := CopyStr(StrSubstNo(NotExistsTxt, Format(RecRef.GETPOSITION()), Format(FieldRef2.NAME), Format(FieldRef.VALUE), Format(RecRef2.NAME)), 1, 250);
                                                 RecordDeletionRelError.Insert();
                                             end;
                                         end;
                                         RecRef2.Close();
                                     end;
-                                until field.Next = 0;
-                        until RecRef.Next = 0;
+                                until field.Next() = 0;
+                        until RecRef.Next() = 0;
                     RecRef.Close();
                 end;
-            until RecordDeletion.Next = 0;
+            until RecordDeletion.Next() = 0;
         Window.Close();
     end;
 
-    procedure ViewRecords(RecordDeletion: Record "CCO Record Deletion");
+    procedure ViewRecords(RecordDeletion: Record "Record Deletion");
     begin
         Hyperlink(GetUrl(ClientType::Current, CompanyName, ObjectType::Table, RecordDeletion."Table ID"));
     end;
 
     procedure SetSuggestedTable(TableID: Integer);
     var
-        RecordDeletion: Record "CCO Record Deletion";
+        RecordDeletion: Record "Record Deletion";
     begin
         if RecordDeletion.Get(TableID) then begin
             RecordDeletion."Delete Records" := true;
@@ -476,8 +475,8 @@ codeunit 50100 "CCO Record Deletion Mgt."
 
     procedure CalcRecordsInTable(TableNoToCheck: Integer): Integer
     var
-        RecRef: RecordRef;
         FieldRec: Record Field;
+        RecRef: RecordRef;
         NoOfRecords: Integer;
     begin
         FieldRec.SetRange(TableNo, TableNoToCheck);

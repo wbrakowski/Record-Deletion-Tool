@@ -1,8 +1,8 @@
-page 50101 "CCO Record Deletion Rel. Error"
+page 50101 "Record Deletion Rel. Error"
 {
 
     PageType = List;
-    SourceTable = "CCO Record Deletion Rel. Error";
+    SourceTable = "Record Deletion Rel. Error";
     Caption = 'Record Deletion Rel. Error';
     ApplicationArea = All;
     UsageCategory = Lists;
@@ -17,18 +17,22 @@ page 50101 "CCO Record Deletion Rel. Error"
                 field("Entry No."; "Entry No.")
                 {
                     ApplicationArea = All;
+                    ToolTip = 'Specifies the Entry No.';
                 }
                 field("Error"; Error)
                 {
                     ApplicationArea = All;
+                    ToolTip = 'Specifies the error text if an error occured';
                 }
                 field("Field Name"; "Field Name")
                 {
                     ApplicationArea = All;
+                    ToolTip = 'Specifies the Field Name';
                 }
                 field("Field No."; "Field No.")
                 {
                     ApplicationArea = All;
+                    ToolTip = 'Specifies the Field No.';
                 }
                 // field(SystemId; SystemId)
                 // {
@@ -37,6 +41,7 @@ page 50101 "CCO Record Deletion Rel. Error"
                 field("Table ID"; "Table ID")
                 {
                     ApplicationArea = All;
+                    ToolTip = 'Specifies the Table ID';
                 }
             }
         }

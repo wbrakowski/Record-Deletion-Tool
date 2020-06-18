@@ -1,8 +1,8 @@
-page 50100 "CCO Record Deletion"
+page 50100 "Record Deletion"
 {
 
     PageType = List;
-    SourceTable = "CCO Record Deletion";
+    SourceTable = "Record Deletion";
     Caption = 'Record Deletion';
     ApplicationArea = All;
     UsageCategory = Lists;
@@ -63,6 +63,7 @@ page 50100 "CCO Record Deletion"
                 PromotedIsBig = true;
                 Image = Refresh;
                 PromotedCategory = Process;
+                PromotedOnly = true;
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.InsertUpdateTables();
@@ -76,6 +77,7 @@ page 50100 "CCO Record Deletion"
                 PromotedIsBig = true;
                 Image = Suggest;
                 PromotedCategory = Process;
+                PromotedOnly = true;
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.SuggestRecordsToDelete();
@@ -89,6 +91,7 @@ page 50100 "CCO Record Deletion"
                 PromotedIsBig = true;
                 Image = Delete;
                 PromotedCategory = Process;
+                PromotedOnly = true;
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.ClearRecordsToDelete();
@@ -102,6 +105,7 @@ page 50100 "CCO Record Deletion"
                 PromotedIsBig = true;
                 Image = Delete;
                 PromotedCategory = Process;
+                PromotedOnly = true;
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.DeleteRecords();
@@ -115,6 +119,7 @@ page 50100 "CCO Record Deletion"
                 PromotedIsBig = true;
                 Image = Relationship;
                 PromotedCategory = Process;
+                PromotedOnly = true;
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.CheckTableRelations();
@@ -128,6 +133,7 @@ page 50100 "CCO Record Deletion"
                 PromotedIsBig = true;
                 Image = Table;
                 PromotedCategory = Process;
+                PromotedOnly = true;
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.ViewRecords(Rec);
@@ -137,6 +143,6 @@ page 50100 "CCO Record Deletion"
 
     }
     var
-        RecordDeletionMgt: Codeunit "CCO Record Deletion Mgt.";
+        RecordDeletionMgt: Codeunit "Record Deletion Mgt.";
 
 }

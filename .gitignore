@@ -2,9 +2,10 @@
 App/.vscode
 !App/.vscode/settings.json
 # Symbols folder
-App/.alpackages/
-App/.alcache/
-App/.altemplates/
+.alpackages/
+.alcache/
+.altemplates/
+.alpackages/
 # Project Output
 App/*.app
 
