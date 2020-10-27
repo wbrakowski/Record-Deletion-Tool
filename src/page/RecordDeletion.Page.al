@@ -13,23 +13,11 @@ page 50100 "Record Deletion"
         {
             repeater(General)
             {
-                field("Delete Records"; "Delete Records")
-                {
-                    ApplicationArea = All;
-                }
-                field("No. of Table Relation Errors"; "No. of Table Relation Errors")
-                {
-                    ApplicationArea = All;
-                }
                 field("Table ID"; "Table ID")
                 {
                     ApplicationArea = All;
                 }
                 field("Table Name"; "Table Name")
-                {
-                    ApplicationArea = All;
-                }
-                field(Company; Company)
                 {
                     ApplicationArea = All;
                 }
@@ -39,6 +27,18 @@ page 50100 "Record Deletion"
                     ApplicationArea = All;
 
                 }
+                field("No. of Table Relation Errors"; "No. of Table Relation Errors")
+                {
+                    ApplicationArea = All;
+                }
+                field("Delete Records"; "Delete Records")
+                {
+                    ApplicationArea = All;
+                }
+                // field(Company; Company)
+                // {
+                //     ApplicationArea = All;
+                // }
             }
         }
     }
