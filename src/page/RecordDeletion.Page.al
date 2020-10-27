@@ -39,11 +39,6 @@ page 50100 "Record Deletion"
                     ApplicationArea = All;
 
                 }
-
-                // field(SystemId; SystemId)
-                // {
-                //     ApplicationArea = All;
-                // }
             }
         }
     }

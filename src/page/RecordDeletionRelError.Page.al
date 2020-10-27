@@ -34,10 +34,6 @@ page 50101 "Record Deletion Rel. Error"
                     ApplicationArea = All;
                     ToolTip = 'Specifies the Field No.';
                 }
-                // field(SystemId; SystemId)
-                // {
-                //     ApplicationArea = All;
-                // }
                 field("Table ID"; "Table ID")
                 {
                     ApplicationArea = All;
