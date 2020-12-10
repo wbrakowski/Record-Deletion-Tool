@@ -1,4 +1,4 @@
-page 50100 "Record Deletion"
+page 50000 "Record Deletion"
 {
 
     PageType = List;
@@ -76,6 +76,20 @@ page 50100 "Record Deletion"
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.SuggestRecordsToDelete();
+                end;
+            }
+            action(SuggestsUnlicensedRecords)
+            {
+                ApplicationArea = All;
+                CaptionML = ENU = 'Suggest Unlicensed Records to Delete';
+                Promoted = true;
+                PromotedIsBig = true;
+                Image = Suggest;
+                PromotedCategory = Process;
+                PromotedOnly = true;
+                trigger OnAction()
+                begin
+                    RecordDeletionMgt.SuggestUnlicensedRecordsToDelete();
                 end;
             }
             action(ClearRecords)
