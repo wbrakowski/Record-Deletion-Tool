@@ -78,10 +78,10 @@ page 50000 "Record Deletion"
                     RecordDeletionMgt.SuggestRecordsToDelete();
                 end;
             }
-            action(SuggestsUnlicensedRecords)
+            action(SuggestsUnlicensedPartnerOrCustomRecords)
             {
                 ApplicationArea = All;
-                CaptionML = ENU = 'Suggest Unlicensed Records to Delete';
+                CaptionML = ENU = 'Suggest Unlicensed Partner or Custom Records to Delete';
                 Promoted = true;
                 PromotedIsBig = true;
                 Image = Suggest;
@@ -89,7 +89,7 @@ page 50000 "Record Deletion"
                 PromotedOnly = true;
                 trigger OnAction()
                 begin
-                    RecordDeletionMgt.SuggestUnlicensedRecordsToDelete();
+                    RecordDeletionMgt.SuggestUnlicensedPartnerOrCustomRecordsToDelete();
                 end;
             }
             action(ClearRecords)
@@ -109,7 +109,7 @@ page 50000 "Record Deletion"
             action(DeleteRecords)
             {
                 ApplicationArea = All;
-                CaptionML = ENU = 'Delete Records';
+                CaptionML = ENU = 'Delete Records (no trigger!)';
                 Promoted = true;
                 PromotedIsBig = true;
                 Image = Delete;
@@ -117,7 +117,21 @@ page 50000 "Record Deletion"
                 PromotedOnly = true;
                 trigger OnAction()
                 begin
-                    RecordDeletionMgt.DeleteRecords();
+                    RecordDeletionMgt.DeleteRecords(false);
+                end;
+            }
+            action(DeleteRecordsWithTrigger)
+            {
+                ApplicationArea = All;
+                CaptionML = ENU = 'Delete Records (with trigger!)';
+                Promoted = true;
+                PromotedIsBig = true;
+                Image = Delete;
+                PromotedCategory = Process;
+                PromotedOnly = true;
+                trigger OnAction()
+                begin
+                    RecordDeletionMgt.DeleteRecords(true);
                 end;
             }
             action(CheckTableRelations)

@@ -359,17 +359,23 @@ codeunit 50000 "Record Deletion Mgt."
         RecordDeletion.ModifyAll("Delete Records", false);
     end;
 
-    procedure DeleteRecords();
+    procedure DeleteRecords(RunTrigger: Boolean);
     var
         RecordDeletion: Record "Record Deletion";
         RecordDeletionRelError: Record "Record Deletion Rel. Error";
         RecRef: RecordRef;
         Window: Dialog;
-        DeleteRecordsQst: Label 'Delete Records?';
+        DeleteRecordsQst: Label 'Delete Records with RunTrigger = false?';
+        DeleteRecordsWithTriggerQst: Label 'Delete Records with RunTrigger = true?';
         DeletingRecordsTxt: Label 'Deleting Records!\Table: #1#######', Comment = '%1 = Table ID';
     begin
-        if not Confirm(DeleteRecordsQst, false) then
-            exit;
+        if RunTrigger then begin
+            if not Confirm(DeleteRecordsWithTriggerQst, false) then
+                exit;
+        end else begin
+            if not Confirm(DeleteRecordsQst, false) then
+                exit;
+        end;
 
         Window.OPEN(DeletingRecordsTxt);
 
@@ -378,7 +384,7 @@ codeunit 50000 "Record Deletion Mgt."
                 if RecordDeletion."Delete Records" then begin
                     Window.Update(1, Format(RecordDeletion."Table ID"));
                     RecRef.OPEN(RecordDeletion."Table ID");
-                    RecRef.DeleteAll();
+                    RecRef.DeleteAll(RunTrigger);
                     RecRef.Close();
                     RecordDeletionRelError.SetRange("Table ID", RecordDeletion."Table ID");
                     RecordDeletionRelError.DeleteAll();
@@ -503,19 +509,20 @@ codeunit 50000 "Record Deletion Mgt."
         exit(0);
     end;
 
-    procedure SuggestUnlicensedRecordsToDelete();
+    procedure SuggestUnlicensedPartnerOrCustomRecordsToDelete();
     var
         RecordDeletion: Record "Record Deletion";
         RecsSuggestedCount: Integer;
-        RecordsSuggestedMsg: Label '%1 unlicensed records were suggested.', Comment = '%1 number of unlicensed records';
+        RecordsSuggestedMsg: Label '%1 unlicensed partner or custom records were suggested.', Comment = '%1 number of unlicensed records';
     begin
         RecordDeletion.SetFilter("Table ID", '> %1', 49999);
         if RecordDeletion.FindSet(false) then
             repeat
-                if not IsRecordInLicense(RecordDeletion."Table ID") then begin
-                    SetSuggestedTable(RecordDeletion."Table ID");
-                    RecsSuggestedCount += 1;
-                end;
+                if not IsRecordStandardTable(RecordDeletion."Table ID") then
+                    if not IsRecordInLicense(RecordDeletion."Table ID") then begin
+                        SetSuggestedTable(RecordDeletion."Table ID");
+                        RecsSuggestedCount += 1;
+                    end;
             until RecordDeletion.Next() = 0;
 
         Message(RecordsSuggestedMsg, RecsSuggestedCount);
@@ -536,6 +543,22 @@ codeunit 50000 "Record Deletion Mgt."
             exit(false)
         else
             exit(true);
+    end;
+
+    local procedure IsRecordStandardTable(TableID: Integer): Boolean
+    begin
+        case true of
+            //5005270 - 5005363
+            (TableID >= Database::"Delivery Reminder Header") and (TableID <= Database::"Phys. Invt. Diff. List Buffer"):
+                exit(true);
+            //99000750 - 99008535
+            (TableID >= Database::"Work Shift") and (TableID <= Database::TempBlob):
+                exit(true);
+            // Microsoft Localizations
+            (TableID >= 100000) and (TableID <= 999999):
+                exit(true);
+        end;
+        exit(false);
     end;
 
 }
