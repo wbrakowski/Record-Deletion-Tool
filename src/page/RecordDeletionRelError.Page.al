@@ -1,4 +1,4 @@
-page 50101 "Record Deletion Rel. Error"
+page 50001 "Record Deletion Rel. Error"
 {
 
     PageType = List;

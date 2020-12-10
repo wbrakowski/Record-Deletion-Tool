@@ -1,5 +1,6 @@
-codeunit 50100 "Record Deletion Mgt."
+codeunit 50000 "Record Deletion Mgt."
 {
+    Permissions = TableData "17" = IMD, Tabledata "36" = IMD, Tabledata "37" = IMD, Tabledata "38" = IMD, Tabledata "39" = IMD, Tabledata "81" = IMD, Tabledata "21" = IMD, Tabledata "25" = IMD, Tabledata "32" = IMD, Tabledata "110" = IMD, TableData "111" = IMD, TableData "112" = IMD, TableData "113" = IMD, TableData "114" = IMD, TableData "115" = IMD, TableData "120" = IMD, Tabledata "121" = IMD, Tabledata "122" = IMD, Tabledata "123" = IMD, Tabledata "124" = IMD, Tabledata "125" = IMD, Tabledata "169" = IMD, Tabledata "379" = IMD, Tabledata "380" = IMD, Tabledata "271" = IMD, Tabledata "5802" = IMD, tabledata "6650" = IMD, tabledata "6660" = IMD;
     procedure InsertUpdateTables();
     var
         RecordDeletion: Record "Record Deletion";
@@ -19,7 +20,15 @@ codeunit 50100 "Record Deletion Mgt."
     end;
 
     procedure SuggestRecordsToDelete();
+    var
+        RecordDeletion: Record "Record Deletion";
+        BeforeSuggestionDeleteCount: Integer;
+        AfterSuggestionDeleteCount: Integer;
+        RecordsWereSuggestedMsg: Label '%1 records to delete were suggested.', Comment = '%1 = number of suggested records';
     begin
+        RecordDeletion.SetRange("Delete Records", true);
+        BeforeSuggestionDeleteCount := RecordDeletion.Count();
+
         SetSuggestedTable(Database::"Action Message Entry");
         SetSuggestedTable(Database::"Analysis View Budget Entry");
         SetSuggestedTable(Database::"Analysis View Entry");
@@ -337,6 +346,10 @@ codeunit 50100 "Record Deletion Mgt."
         SetSuggestedTable(Database::Attendee);
         SetSuggestedTable(Database::Job);
         SetSuggestedTable(Database::Opportunity);
+
+        RecordDeletion.SetRange("Delete Records", true);
+        AfterSuggestionDeleteCount := RecordDeletion.Count();
+        Message(RecordsWereSuggestedMsg, AfterSuggestionDeleteCount - BeforeSuggestionDeleteCount);
     end;
 
     procedure ClearRecordsToDelete();
@@ -489,4 +502,40 @@ codeunit 50100 "Record Deletion Mgt."
         end;
         exit(0);
     end;
+
+    procedure SuggestUnlicensedRecordsToDelete();
+    var
+        RecordDeletion: Record "Record Deletion";
+        RecsSuggestedCount: Integer;
+        RecordsSuggestedMsg: Label '%1 unlicensed records were suggested.', Comment = '%1 number of unlicensed records';
+    begin
+        RecordDeletion.SetFilter("Table ID", '> %1', 49999);
+        if RecordDeletion.FindSet(false) then
+            repeat
+                if not IsRecordInLicense(RecordDeletion."Table ID") then begin
+                    SetSuggestedTable(RecordDeletion."Table ID");
+                    RecsSuggestedCount += 1;
+                end;
+            until RecordDeletion.Next() = 0;
+
+        Message(RecordsSuggestedMsg, RecsSuggestedCount);
+    end;
+
+    local procedure IsRecordInLicense(TableID: Integer): Boolean
+    var
+        LicensePermission: Record "License Permission";
+    begin
+        // LicensePermission.Get(LicensePermission."Object Type"::Table, TableID);
+        LicensePermission.Get(LicensePermission."Object Type"::TableData, TableID);
+        if (LicensePermission."Read Permission" = LicensePermission."Read Permission"::" ") and
+            (LicensePermission."Insert Permission" = LicensePermission."Insert Permission"::" ") and
+            (LicensePermission."Modify Permission" = LicensePermission."Modify Permission"::" ") and
+            (LicensePermission."Delete Permission" = LicensePermission."Delete Permission"::" ") and
+            (LicensePermission."Execute Permission" = LicensePermission."Execute Permission"::" ")
+        then
+            exit(false)
+        else
+            exit(true);
+    end;
+
 }

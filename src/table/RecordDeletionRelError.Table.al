@@ -1,4 +1,4 @@
-table 50101 "Record Deletion Rel. Error"
+table 50001 "Record Deletion Rel. Error"
 {
     DataClassification = ToBeClassified;
     LookupPageId = "Record Deletion Rel. Error";
