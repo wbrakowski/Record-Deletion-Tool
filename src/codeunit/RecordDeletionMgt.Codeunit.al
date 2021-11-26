@@ -13,7 +13,7 @@ codeunit 50000 "Record Deletion Mgt."
             repeat
                 RecordDeletion.Init();
                 RecordDeletion."Table ID" := AllObjWithCaption."Object ID";
-                RecordDeletion.Company := CompanyName;
+                RecordDeletion.Company := CopyStr(CompanyName, 1, MaxStrLen(RecordDeletion.Company));
                 if RecordDeletion.Insert() then;
             until AllObjWithCaption.Next() = 0;
 
@@ -363,8 +363,8 @@ codeunit 50000 "Record Deletion Mgt."
     var
         RecordDeletion: Record "Record Deletion";
         RecordDeletionRelError: Record "Record Deletion Rel. Error";
-        RecRef: RecordRef;
-        Window: Dialog;
+        RecordRef: RecordRef;
+        UpdateDialog: Dialog;
         DeleteRecordsQst: Label 'Delete Records with RunTrigger = false?';
         DeleteRecordsWithTriggerQst: Label 'Delete Records with RunTrigger = true?';
         DeletingRecordsTxt: Label 'Deleting Records!\Table: #1#######', Comment = '%1 = Table ID';
@@ -372,26 +372,28 @@ codeunit 50000 "Record Deletion Mgt."
         if RunTrigger then begin
             if not Confirm(DeleteRecordsWithTriggerQst, false) then
                 exit;
+#pragma warning disable AA0005
         end else begin
             if not Confirm(DeleteRecordsQst, false) then
                 exit;
         end;
+#pragma warning restore AA0005
 
-        Window.OPEN(DeletingRecordsTxt);
+        UpdateDialog.OPEN(DeletingRecordsTxt);
 
         if RecordDeletion.FindSet() then
             repeat
                 if RecordDeletion."Delete Records" then begin
-                    Window.Update(1, Format(RecordDeletion."Table ID"));
-                    RecRef.OPEN(RecordDeletion."Table ID");
-                    RecRef.DeleteAll(RunTrigger);
-                    RecRef.Close();
+                    UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
+                    RecordRef.OPEN(RecordDeletion."Table ID");
+                    RecordRef.DeleteAll(RunTrigger);
+                    RecordRef.Close();
                     RecordDeletionRelError.SetRange("Table ID", RecordDeletion."Table ID");
                     RecordDeletionRelError.DeleteAll();
                 end;
             until RecordDeletion.Next() = 0;
 
-        Window.Close();
+        UpdateDialog.Close();
     end;
 
     procedure CheckTableRelations();
@@ -402,78 +404,78 @@ codeunit 50000 "Record Deletion Mgt."
         RecordDeletion: Record "Record Deletion";
         RecordDeletionRelError: Record "Record Deletion Rel. Error";
         TableMetadata: Record "Table Metadata";
-        RecRef: RecordRef;
-        RecRef2: RecordRef;
+        RecordRef: RecordRef;
+        RecordRef2: RecordRef;
         FieldRef: FieldRef;
         FieldRef2: FieldRef;
         SkipCheck: Boolean;
-        Window: Dialog;
+        UpdateDialog: Dialog;
         EntryNo: Integer;
-        NotExistsTxt: Label '%1 => %2 = ''%3'' does not exist in the ''%4'' table';
+        NotExistsTxt: Label '%1 => %2 = ''%3'' does not exist in the ''%4'' table', Comment = '%1 = RecRef Position, %2 = FieldRef Name, %3 = FieldRef Value, %4 = Record Ref Name';
         CheckRelationsQst: Label 'Check Table Relations?';
         CheckingRelationsTxt: Label 'Checking Relations Between Records!\Table: #1#######', Comment = '%1 = Table ID';
     begin
         if not Confirm(CheckRelationsQst, false) then
             exit;
 
-        Window.OPEN(CheckingRelationsTxt);
+        UpdateDialog.OPEN(CheckingRelationsTxt);
 
         RecordDeletionRelError.DeleteAll();
 
         if RecordDeletion.FindSet() then
             repeat
-                Window.Update(1, Format(RecordDeletion."Table ID"));
+                UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
                 // Only allow "normal" tables to avoid errors, Skip TableType MicrosoftGraph and CRM etc.
                 TableMetadata.SetRange(ID, RecordDeletion."Table ID");
                 TableMetadata.SetRange(TableType, TableMetadata.TableType::Normal);
                 if not TableMetadata.IsEmpty then begin
-                    RecRef.OPEN(RecordDeletion."Table ID");
-                    if RecRef.FindSet() then
+                    RecordRef.OPEN(RecordDeletion."Table ID");
+                    if RecordRef.FindSet() then
                         repeat
                             field.SetRange(TableNo, RecordDeletion."Table ID");
                             field.SetRange(Class, field.Class::Normal);
                             field.SetFilter(RelationTableNo, '<>0');
                             if field.FindSet() then
                                 repeat
-                                    FieldRef := RecRef.field(field."No.");
+                                    FieldRef := RecordRef.field(field."No.");
                                     if (Format(FieldRef.VALUE) <> '') and (FORMAT(FieldRef.VALUE) <> '0') then begin
-                                        RecRef2.OPEN(field.RelationTableNo);
+                                        RecordRef2.OPEN(field.RelationTableNo);
                                         SkipCheck := false;
-                                        if field.RelationFieldNo <> 0 then begin
-                                            FieldRef2 := RecRef2.field(field.RelationFieldNo)
-                                        end else begin
+                                        if field.RelationFieldNo <> 0 then
+                                            FieldRef2 := RecordRef2.field(field.RelationFieldNo)
+                                        else begin
                                             KeyRec.Get(field.RelationTableNo, 1);  // PK
                                             Field2.SetRange(TableNo, field.RelationTableNo);
                                             Field2.SetFilter(FieldName, CopyStr(KeyRec.Key, 1, 30));
                                             if Field2.FindFirst() then // No Match if Dual PK
-                                                FieldRef2 := RecRef2.field(Field2."No.")
+                                                FieldRef2 := RecordRef2.field(Field2."No.")
                                             else
                                                 SkipCheck := true;
                                         end;
                                         if (FieldRef.TYPE = FieldRef2.TYPE) and (FieldRef.LENGTH = FieldRef2.LENGTH) and (not SkipCheck) then begin
                                             FieldRef2.SetRange(FieldRef.VALUE);
-                                            if not RecRef2.FindFirst() then begin
-                                                RecordDeletionRelError.SetRange("Table ID", RecRef.NUMBER);
+                                            if not RecordRef2.FindFirst() then begin
+                                                RecordDeletionRelError.SetRange("Table ID", RecordRef.NUMBER);
                                                 if RecordDeletionRelError.FindLast() then
                                                     EntryNo := RecordDeletionRelError."Entry No." + 1
                                                 else
                                                     EntryNo := 1;
                                                 RecordDeletionRelError.Init();
-                                                RecordDeletionRelError."Table ID" := RecRef.NUMBER;
+                                                RecordDeletionRelError."Table ID" := RecordRef.NUMBER;
                                                 RecordDeletionRelError."Entry No." := EntryNo;
                                                 RecordDeletionRelError."Field No." := FieldRef.NUMBER;
-                                                RecordDeletionRelError.Error := CopyStr(StrSubstNo(NotExistsTxt, Format(RecRef.GETPOSITION()), Format(FieldRef2.NAME), Format(FieldRef.VALUE), Format(RecRef2.NAME)), 1, 250);
+                                                RecordDeletionRelError.Error := CopyStr(StrSubstNo(NotExistsTxt, Format(RecordRef.GETPOSITION()), Format(FieldRef2.NAME), Format(FieldRef.VALUE), Format(RecordRef2.NAME)), 1, 250);
                                                 RecordDeletionRelError.Insert();
                                             end;
                                         end;
-                                        RecRef2.Close();
+                                        RecordRef2.Close();
                                     end;
                                 until field.Next() = 0;
-                        until RecRef.Next() = 0;
-                    RecRef.Close();
+                        until RecordRef.Next() = 0;
+                    RecordRef.Close();
                 end;
             until RecordDeletion.Next() = 0;
-        Window.Close();
+        UpdateDialog.Close();
     end;
 
     procedure ViewRecords(RecordDeletion: Record "Record Deletion");
@@ -494,16 +496,16 @@ codeunit 50000 "Record Deletion Mgt."
 
     procedure CalcRecordsInTable(TableNoToCheck: Integer): Integer
     var
-        FieldRec: Record Field;
-        RecRef: RecordRef;
+        Field: Record Field;
+        RecordRef: RecordRef;
         NoOfRecords: Integer;
     begin
-        FieldRec.SetRange(TableNo, TableNoToCheck);
-        if FieldRec.FindFirst() then begin
-            RecRef.Open(TableNoToCheck);
-            RecRef.LockTable();
-            NoOfRecords := RecRef.Count();
-            RecRef.Close();
+        Field.SetRange(TableNo, TableNoToCheck);
+        if not Field.IsEmpty() then begin
+            RecordRef.Open(TableNoToCheck);
+            RecordRef.LockTable();
+            NoOfRecords := RecordRef.Count();
+            RecordRef.Close();
             exit(NoOfRecords);
         end;
         exit(0);
@@ -552,7 +554,7 @@ codeunit 50000 "Record Deletion Mgt."
             (TableID >= Database::"Delivery Reminder Header") and (TableID <= Database::"Phys. Invt. Diff. List Buffer"):
                 exit(true);
             //99000750 - 99008535
-            (TableID >= Database::"Work Shift") and (TableID <= Database::TempBlob):
+            (TableID >= Database::"Work Shift") and (TableID <= 99008535):
                 exit(true);
             // Microsoft Localizations
             (TableID >= 100000) and (TableID <= 999999):
