@@ -14,27 +14,27 @@ page 50001 "Record Deletion Rel. Error"
             repeater(General)
             {
 
-                field("Entry No."; "Entry No.")
+                field("Entry No."; Rec."Entry No.")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the Entry No.';
                 }
-                field("Error"; Error)
+                field("Error"; Rec.Error)
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the error text if an error occured';
                 }
-                field("Field Name"; "Field Name")
+                field("Field Name"; Rec."Field Name")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the Field Name';
                 }
-                field("Field No."; "Field No.")
+                field("Field No."; Rec."Field No.")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the Field No.';
                 }
-                field("Table ID"; "Table ID")
+                field("Table ID"; Rec."Table ID")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the Table ID';

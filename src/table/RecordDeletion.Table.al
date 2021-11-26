@@ -56,7 +56,7 @@ table 50000 "Record Deletion"
 
     trigger OnInsert()
     begin
-        Company := CompanyName;
+        Company := CopyStr(CompanyName, 1, MaxStrLen(Company));
     end;
 
 }

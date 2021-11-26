@@ -1,7 +1,7 @@
 {
   "id": "cafd90e7-34f2-4ff9-ae7e-ae1210bc1841",
   "name": "Record-Deletion-Tool",
-  "publisher": "Default publisher",
+  "publisher": "Waldemar Brakowski",
   "version": "1.0.0.0",
   "brief": "",
   "description": "",
@@ -13,8 +13,8 @@
   "dependencies": [
   ],
   "screenshots": [],
-  "platform": "17.0.0.0",
-  "application": "17.0.0.0",
+  "platform": "19.0.0.0",
+  "application": "19.0.0.0",
   "idRanges": [
     {
       "from": 50000,
@@ -22,6 +22,5 @@
     }
   ],
   "contextSensitiveHelpUrl": "https://Record-Deletion-Tool.com/help/",
-  "showMyCode": true,
-  "runtime": "6.0"
+  "runtime": "8.0"
 }
