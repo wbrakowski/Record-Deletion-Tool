@@ -10,18 +10,24 @@
   "help": "",
   "url": "",
   "logo": "",
-  "dependencies": [
-  ],
+  "dependencies": [],
   "screenshots": [],
-  "platform": "20.0.0.0",
-  "application": "20.0.0.0",
+  "platform": "1.0.0.0",
+  "application": "25.0.0.0",
   "idRanges": [
     {
       "from": 50000,
       "to": 50099
     }
   ],
-  "contextSensitiveHelpUrl": "https://Record-Deletion-Tool.com/help/",
-  "runtime": "9.0",
+  "resourceExposurePolicy": {
+    "allowDebugging": true,
+    "allowDownloadingSource": true,
+    "includeSourceInSymbolFile": true
+  },
+  "runtime": "13.0",
+  "features": [
+    "NoImplicitWith"
+  ],
   "target": "Cloud"
 }
