@@ -17,14 +17,14 @@ table 50000 "Record Deletion"
             FieldClass = FlowField;
             CalcFormula = Lookup(AllObjWithCaption."Object Name" where("Object Type" = const(Table), "Object ID" = field("Table ID")));
         }
-        field(20; "No. of Records"; Integer)
-        {
-            Caption = 'No. of Records';
-            Editable = false;
-            FieldClass = FlowField;
-            //CalcFormula = lookup ("Table Information"."No. of Records" where("Company Name" = field(Company), "Table No." = field("Table ID")));
-            //CalcFormula = lookup ("Table Information"."No. of Records" where("Company Name" = field(Company), "Table No." = field("Table ID")));
-        }
+        // field(20; "No. of Records"; Integer)
+        // {
+        //     Caption = 'No. of Records';
+        //     Editable = false;
+        //     FieldClass = FlowField;
+        //     // CalcFormula = lookup ("Table Information"."No. of Records" where("Company Name" = field(Company), "Table No." = field("Table ID")));
+        //     //CalcFormula = lookup ("Table Information"."No. of Records" where("Company Name" = field(Company), "Table No." = field("Table ID")));
+        // }
         field(21; "No. of Table Relation Errors"; Integer)
         {
             Caption = 'No. of Table Relation Errors';
