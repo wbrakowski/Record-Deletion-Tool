@@ -1,7 +1,45 @@
 codeunit 50000 "Record Deletion Mgt."
 {
-    // Permissions = TableData 17 = IMD, Tabledata 376 = IMD, Tabledata 37 = IMD, Tabledata 38 = IMD, Tabledata 39 = IMD, Tabledata 81 = IMD, Tabledata 21 = IMD, Tabledata 25 = IMD, Tabledata 732 = IMD, Tabledata 110 = IMD, TableData 111 = IMD, TableData 112 = IMD, TableData 113 = IMD, TableData 114 = IMD, TableData 115 = IMD, TableData 120 = IMD, Tabledata 121 = IMD, Tabledata 122 = IMD, Tabledata 123 = IMD, Tabledata 124 = IMD, Tabledata 125 = IMD, Tabledata 169 = IMD, Tabledata 379 = IMD, Tabledata 380 = IMD, Tabledata 271 = IMD, Tabledata 5802 = IMD, tabledata 6650 = IMD, tabledata 66160 = IMD;
-    Permissions = TableData 17 = IMD, Tabledata 376 = IMD, Tabledata 37 = IMD, Tabledata 38 = IMD, Tabledata 39 = IMD, Tabledata 81 = IMD, Tabledata 21 = IMD, Tabledata 25 = IMD, Tabledata 110 = IMD, TableData 111 = IMD, TableData 112 = IMD, TableData 113 = IMD, TableData 114 = IMD, TableData 115 = IMD, TableData 120 = IMD, Tabledata 121 = IMD, Tabledata 122 = IMD, Tabledata 123 = IMD, Tabledata 124 = IMD, Tabledata 125 = IMD, Tabledata 169 = IMD, Tabledata 379 = IMD, Tabledata 380 = IMD, Tabledata 271 = IMD, Tabledata 5802 = IMD, tabledata 6650 = IMD;
+    Permissions = TableData 17 = IMD, 
+                  Tabledata 21 = IMD, 
+                  Tabledata 25 = IMD, 
+                  Tabledata 32 = IMD, 
+                  Tabledata 36 = IMD, 
+                  Tabledata 37 = IMD, 
+                  Tabledata 38 = IMD, 
+                  Tabledata 39 = IMD, 
+                  Tabledata 45 = IMD, 
+                  Tabledata 81 = IMD, 
+                  Tabledata 110 = IMD, 
+                  TableData 111 = IMD, 
+                  TableData 112 = IMD, 
+                  TableData 113 = IMD, 
+                  TableData 114 = IMD, 
+                  TableData 115 = IMD, 
+                  TableData 120 = IMD, 
+                  Tabledata 121 = IMD, 
+                  Tabledata 122 = IMD, 
+                  Tabledata 123 = IMD, 
+                  Tabledata 124 = IMD, 
+                  Tabledata 125 = IMD, 
+                  Tabledata 169 = IMD, 
+                  Tabledata 253 = IMD, 
+                  Tabledata 254 = IMD, 
+                  Tabledata 271 = IMD,
+                  Tabledata 281 = IMD, 
+                  Tabledata 298 = IMD, 
+                  Tabledata 300 = IMD, 
+                  Tabledata 339 = IMD, 
+                  Tabledata 379 = IMD, 
+                  Tabledata 380 = IMD, 
+                  Tabledata 405 = IMD, 
+                  Tabledata 480 = IMD, 
+                //   Tabledata 3905 = IMD, 
+                  Tabledata 5601 = IMD, 
+                  Tabledata 5802 = IMD, 
+                  Tabledata 6650 = IMD,
+                  Tabledata 6651 = IMD, 
+                  Tabledata 6661 = IMD; 
     procedure InsertUpdateTables();
     var
         RecordDeletion: Record "Record Deletion";
