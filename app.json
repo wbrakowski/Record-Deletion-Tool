@@ -1,5 +1,5 @@
 {
-  "id": "cafd90e7-34f2-4ff9-ae7e-ae1210bc1841",
+  "id": "cafd90e7-34f2-4ff9-ae7e-ae1210bc1842",
   "name": "Record-Deletion-Tool",
   "publisher": "Waldemar Brakowski",
   "version": "1.0.0.0",
@@ -12,8 +12,8 @@
   "logo": "",
   "dependencies": [],
   "screenshots": [],
-  "platform": "1.0.0.0",
-  "application": "25.0.0.0",
+   "platform": "27.0.0.0",
+  "application": "27.0.0.0",
   "idRanges": [
     {
       "from": 50000,
@@ -25,9 +25,10 @@
     "allowDownloadingSource": true,
     "includeSourceInSymbolFile": true
   },
-  "runtime": "13.0",
+  "runtime": "16.0",
   "features": [
     "NoImplicitWith"
   ],
-  "target": "Cloud"
+  "target": "Cloud",
+  "contextSensitiveHelpUrl": "https://github.com/wbrakowski/Record-Deletion-Tool/blob/master/README.md"
 }

@@ -1,49 +1,47 @@
 table 50000 "Record Deletion"
 {
-    DataClassification = ToBeClassified;
+    Caption = 'Record Deletion';
+    DataClassification = CustomerContent;
+    DrillDownPageId = "Record Deletion";
+    LookupPageId = "Record Deletion";
 
     fields
     {
         field(1; "Table ID"; Integer)
         {
             Caption = 'Table ID';
-            DataClassification = ToBeClassified;
             Editable = false;
+            ToolTip = 'Specifies the ID of the table.';
         }
         field(10; "Table Name"; Text[250])
         {
+            CalcFormula = lookup(AllObjWithCaption."Object Name" where("Object Type" = const(Table), "Object ID" = field("Table ID")));
             Caption = 'Table Name';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = Lookup(AllObjWithCaption."Object Name" where("Object Type" = const(Table), "Object ID" = field("Table ID")));
+            ToolTip = 'Specifies the name of the table.';
         }
-        // field(20; "No. of Records"; Integer)
-        // {
-        //     Caption = 'No. of Records';
-        //     Editable = false;
-        //     FieldClass = FlowField;
-        //     // CalcFormula = lookup ("Table Information"."No. of Records" where("Company Name" = field(Company), "Table No." = field("Table ID")));
-        //     //CalcFormula = lookup ("Table Information"."No. of Records" where("Company Name" = field(Company), "Table No." = field("Table ID")));
-        // }
+        // Field 20 removed - Table Information is OnPrem only, not Cloud compatible
+        // Use RecordDeletionMgt.CalcRecordsInTable() on the page instead (already implemented)
         field(21; "No. of Table Relation Errors"; Integer)
         {
+            CalcFormula = count("Record Deletion Rel. Error" where("Table ID" = field("Table ID")));
             Caption = 'No. of Table Relation Errors';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = Count("Record Deletion Rel. Error" where("Table ID" = field("Table ID")));
+            ToolTip = 'Specifies the number of table relation errors for this table.';
         }
         field(30; "Delete Records"; Boolean)
         {
             Caption = 'Delete Records';
-            DataClassification = ToBeClassified;
+            ToolTip = 'Specifies whether records should be deleted for this table.';
         }
         field(40; Company; Text[30])
         {
             Caption = 'Company';
-            DataClassification = ToBeClassified;
+            AllowInCustomizations = Never;
+            ToolTip = 'Specifies the company name.';
         }
-
-
     }
 
     keys
@@ -54,9 +52,18 @@ table 50000 "Record Deletion"
         }
     }
 
+    fieldgroups
+    {
+        fieldgroup(DropDown; "Table ID", "Table Name")
+        {
+        }
+        fieldgroup(Brick; "Table ID", "Table Name")
+        {
+        }
+    }
+
     trigger OnInsert()
     begin
-        Company := CopyStr(CompanyName, 1, MaxStrLen(Company));
+        Company := CopyStr(CompanyName(), 1, MaxStrLen(Company));
     end;
-
 }
