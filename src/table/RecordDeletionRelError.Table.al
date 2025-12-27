@@ -1,40 +1,42 @@
 table 50001 "Record Deletion Rel. Error"
 {
-    DataClassification = ToBeClassified;
-    LookupPageId = "Record Deletion Rel. Error";
+    Caption = 'Record Deletion Rel. Error';
+    DataClassification = CustomerContent;
     DrillDownPageId = "Record Deletion Rel. Error";
+    LookupPageId = "Record Deletion Rel. Error";
     fields
     {
         field(1; "Table ID"; Integer)
         {
             Caption = 'Table ID';
-            DataClassification = ToBeClassified;
             Editable = false;
+            ToolTip = 'Specifies the Table ID.';
         }
         field(2; "Entry No."; Integer)
         {
             Caption = 'Entry No.';
-            DataClassification = ToBeClassified;
             Editable = false;
+            ToolTip = 'Specifies the Entry No.';
         }
         field(10; "Field No."; Integer)
         {
             Caption = 'Field No.';
-            DataClassification = ToBeClassified;
             Editable = false;
+            ToolTip = 'Specifies the Field No.';
         }
         field(11; "Field Name"; Text[30])
         {
+            CalcFormula = lookup(Field.FieldName where(TableNo = field("Table ID"), "No." = field("Field No.")));
             Caption = 'Field Name';
-            FieldClass = FlowField;
-            CalcFormula = Lookup (Field.FieldName where(TableNo = field("Table ID"), "No." = field("Field No.")));
             Editable = false;
+            FieldClass = FlowField;
+            ToolTip = 'Specifies the Field Name.';
         }
-        field(20; "Error"; Text[250])
+        field(20; Error; Text[250])
         {
             Caption = 'Error';
-            DataClassification = ToBeClassified;
             Editable = false;
+            ToolTip = 'Specifies the error text if an error occured.';
         }
     }
 
@@ -46,4 +48,13 @@ table 50001 "Record Deletion Rel. Error"
         }
     }
 
+    fieldgroups
+    {
+        fieldgroup(DropDown; "Table ID", "Entry No.", "Field Name")
+        {
+        }
+        fieldgroup(Brick; "Table ID", "Entry No.", "Field Name")
+        {
+        }
+    }
 }
