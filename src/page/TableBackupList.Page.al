@@ -1,3 +1,11 @@
+namespace RecordDeletionTool;
+
+using System.Reflection;
+using System.Utilities;
+
+/// <summary>
+/// List page showing all table backups, with actions to create, restore, export, import and clean them up.
+/// </summary>
 page 50002 "Table Backup List"
 {
     ApplicationArea = All;

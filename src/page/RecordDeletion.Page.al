@@ -1,3 +1,8 @@
+namespace RecordDeletionTool;
+
+/// <summary>
+/// List page used to select tables and manage the record deletion workflow.
+/// </summary>
 page 50000 "Record Deletion"
 {
     ApplicationArea = All;
