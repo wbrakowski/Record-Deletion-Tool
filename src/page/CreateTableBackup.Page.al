@@ -1,3 +1,10 @@
+namespace RecordDeletionTool;
+
+using System.Reflection;
+
+/// <summary>
+/// Dialog page used to create a new table backup, optionally restricted by a filter.
+/// </summary>
 page 50004 "Create Table Backup"
 {
     ApplicationArea = All;
@@ -28,12 +35,12 @@ page 50004 "Create Table Backup"
                         AllObjWithCaption: Record AllObjWithCaption;
                     begin
                         AllObjWithCaption.SetRange("Object Type", AllObjWithCaption."Object Type"::Table);
-                        if Page.RunModal(Page::"Table Objects", AllObjWithCaption) = Action::LookupOK then begin
-                            TableID := AllObjWithCaption."Object ID";
-                            UpdateTableName();
-                            exit(true);
-                        end;
-                        exit(false);
+                        if Page.RunModal(Page::"Table Objects", AllObjWithCaption) <> Action::LookupOK then
+                            exit(false);
+
+                        TableID := AllObjWithCaption."Object ID";
+                        UpdateTableName();
+                        exit(true);
                     end;
                 }
                 field(TableNameField; TableName)
@@ -139,6 +146,7 @@ page 50004 "Create Table Backup"
 
         AllObjWithCaption.SetRange("Object Type", AllObjWithCaption."Object Type"::Table);
         AllObjWithCaption.SetRange("Object ID", TableID);
+        AllObjWithCaption.SetLoadFields("Object Caption");
         if AllObjWithCaption.FindFirst() then
             TableName := AllObjWithCaption."Object Caption";
     end;

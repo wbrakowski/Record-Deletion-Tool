@@ -1,3 +1,8 @@
+namespace RecordDeletionTool;
+
+/// <summary>
+/// List page showing table relation errors found before deletion.
+/// </summary>
 page 50001 "Record Deletion Rel. Error"
 {
     ApplicationArea = All;

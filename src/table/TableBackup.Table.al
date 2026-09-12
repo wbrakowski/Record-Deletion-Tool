@@ -1,3 +1,10 @@
+namespace RecordDeletionTool;
+
+using System.Reflection;
+
+/// <summary>
+/// Stores a backup of a table's data, together with metadata about how and when it was created.
+/// </summary>
 table 50002 "Table Backup"
 {
     Caption = 'Table Backup';
@@ -163,21 +170,21 @@ table 50002 "Table Backup"
             TableBackupMgt.DeleteSnapshotTable("Snapshot Table ID");
     end;
 
-    procedure ExportToFile()
+    internal procedure ExportToFile()
     var
         TableBackupMgt: Codeunit "Table Backup Mgt.";
     begin
         TableBackupMgt.ExportBackupToFile(Rec);
     end;
 
-    procedure RestoreBackup()
+    internal procedure RestoreBackup()
     var
         TableBackupMgt: Codeunit "Table Backup Mgt.";
     begin
         TableBackupMgt.RestoreBackup(Rec);
     end;
 
-    procedure ViewBackupData()
+    internal procedure ViewBackupData()
     var
         TableBackupMgt: Codeunit "Table Backup Mgt.";
     begin

@@ -1,3 +1,8 @@
+namespace RecordDeletionTool;
+
+/// <summary>
+/// Card page showing the details of a single table backup, with actions to restore, export or view its data.
+/// </summary>
 page 50003 "Table Backup Card"
 {
     ApplicationArea = All;
