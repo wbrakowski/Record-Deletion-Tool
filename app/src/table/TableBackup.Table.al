@@ -37,7 +37,7 @@ table 50002 "Table Backup"
         field(4; "Backup Type"; Enum "Backup Type")
         {
             Caption = 'Backup Type';
-            ToolTip = 'Specifies the type of backup.';
+            ToolTip = 'Specifies the type of backup. Snapshot and Full Backup are currently stored in the same JSON format as JSON Export.';
         }
         field(5; "Backup Date Time"; DateTime)
         {
@@ -84,13 +84,6 @@ table 50002 "Table Backup"
         {
             Caption = 'File Name';
             ToolTip = 'Specifies the file name for the backup.';
-        }
-        field(12; "Compression Enabled"; Boolean)
-        {
-            AllowInCustomizations = AsReadWrite;
-            Caption = 'Compression Enabled';
-            InitValue = true;
-            ToolTip = 'Specifies whether compression is enabled for the backup.';
         }
         field(13; "Backup Size (KB)"; Decimal)
         {

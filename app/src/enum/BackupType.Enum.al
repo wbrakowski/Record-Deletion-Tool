@@ -14,10 +14,10 @@ enum 50001 "Backup Type"
     }
     value(2; Snapshot)
     {
-        Caption = 'Snapshot';
+        Caption = 'Snapshot (JSON-based)';
     }
     value(3; "Full Backup")
     {
-        Caption = 'Full Backup';
+        Caption = 'Full Backup (JSON-based)';
     }
 }
