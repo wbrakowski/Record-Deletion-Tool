@@ -8,6 +8,7 @@ test/.vscode
 .alcache/
 .altemplates/
 .snapshots/
+.coverage/
 # Project Output
 app/*.app
 test/*.app

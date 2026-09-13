@@ -117,6 +117,7 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 - **Target**: Cloud
 - **Object ID Range**: 50000-50099
 - **Dependencies**: None (uses standard BC base app)
+- **Namespace**: `RecordDeletionTool`
 
 ### Components
 
@@ -125,6 +126,22 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 - **Codeunits**: Record Deletion Mgt., Table Backup Mgt.
 - **Enums**: Backup Type, Backup Operation Type
 - **Permission Set**: Record Deletion (assignable)
+
+## Development & Testing
+
+The repository is split into two sibling AL projects:
+
+- **`app/`**: the main extension described above (id range 50000-50099).
+- **`test/`**: a separate AL test app (id range 60000-60049) with an automated test suite built on the AL Test Toolkit (`Library Assert`), covering backup creation/restore (all backup types and field types) and the deletion/relation-check logic.
+
+To work on this repo:
+
+1. Open **`Record-Deletion-Tool.code-workspace`** in VS Code (multi-root workspace covering both `app/` and `test/`).
+2. Run **AL: Download Symbols** for both projects.
+3. Build both projects, publish `app/` first, then `test/` (it depends on the main app).
+4. Run the automated tests via the AL Test Tool (Test Explorer) or **AL: Run All Tests**.
+
+See [.github/copilot-instructions.md](.github/copilot-instructions.md) for detailed architecture notes and testing conventions.
 
 ## Best Practices
 
@@ -172,6 +189,7 @@ http://www.olofsimren.com/record-deletion-tool-for-dynamics-nav-2015/
 - Modern AL patterns and code quality standards
 - Enhanced user experience with progress dialogs
 - Extensive table coverage across all BC functional areas
+- Automated test suite (separate `test/` AL app) covering backup/restore and deletion logic
 
 ## License
 
@@ -183,5 +201,5 @@ GitHub: https://github.com/wbrakowski/Record-Deletion-Tool
 
 ## Contributing
 
-Issues and pull requests are welcome! Please test thoroughly before submitting changes.
+Issues and pull requests are welcome! Please test thoroughly before submitting changes, including running the automated test suite in `test/` (see [Development & Testing](#development--testing)).
 

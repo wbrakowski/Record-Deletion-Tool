@@ -38,6 +38,33 @@ table 60000 "Test Buffer"
             Caption = 'Date Value';
             ToolTip = 'Specifies a date value used for round-trip testing.';
         }
+        field(7; "Related No."; Code[20])
+        {
+            Caption = 'Related No.';
+            TableRelation = "Test Buffer"."No.";
+            ToolTip = 'Specifies a related test buffer record, used to test table relation checks.';
+        }
+        field(8; "Time Value"; Time)
+        {
+            Caption = 'Time Value';
+            ToolTip = 'Specifies a time value used for round-trip testing.';
+        }
+        field(9; "DateTime Value"; DateTime)
+        {
+            Caption = 'DateTime Value';
+            ToolTip = 'Specifies a date-time value used for round-trip testing.';
+        }
+        field(10; "Guid Value"; Guid)
+        {
+            Caption = 'Guid Value';
+            ToolTip = 'Specifies a GUID value used for round-trip testing.';
+        }
+        field(11; "Related System ID"; Guid)
+        {
+            Caption = 'Related System ID';
+            TableRelation = "Test Buffer".SystemId;
+            ToolTip = 'Specifies a related test buffer record by SystemId, used to test GUID-based relation checks.';
+        }
     }
 
     keys

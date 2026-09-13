@@ -598,7 +598,8 @@ codeunit 50000 "Record Deletion Mgt."
         exit(ConfirmManagement.GetResponseOrDefault(CreateBackupQst, true));
     end;
 
-    local procedure CreateBackupsForDeletion(RunTrigger: Boolean)
+    // internal (not local) so the test app can exercise backup creation for flagged tables directly, without the confirm dialogs
+    internal procedure CreateBackupsForDeletion(RunTrigger: Boolean)
     var
         RecordDeletion: Record "Record Deletion";
         TableBackupMgt: Codeunit "Table Backup Mgt.";
@@ -627,7 +628,8 @@ codeunit 50000 "Record Deletion Mgt."
         UpdateDialog.Close();
     end;
 
-    local procedure PerformDeletion(RunTrigger: Boolean)
+    // internal (not local) so the test app can exercise the deletion logic directly, without the confirm dialogs
+    internal procedure PerformDeletion(RunTrigger: Boolean)
     var
         RecordDeletion: Record "Record Deletion";
         RecordDeletionRelError: Record "Record Deletion Rel. Error";
@@ -686,7 +688,8 @@ codeunit 50000 "Record Deletion Mgt."
         UpdateDialog.Close();
     end;
 
-    local procedure CheckTableRelationsForTable(TableID: Integer)
+    // internal (not local) so the test app can exercise the relation check for a single table directly, without the confirm dialog
+    internal procedure CheckTableRelationsForTable(TableID: Integer)
     var
         TableMetadata: Record "Table Metadata";
         RecordRef: RecordRef;
