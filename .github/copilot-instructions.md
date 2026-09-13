@@ -1,7 +1,12 @@
 # Record Deletion Tool - Copilot Instructions
 
 ## Project Overview
-Business Central AL extension (v27.0, Cloud target) that enables bulk deletion of records across multiple tables with relationship validation and backup capabilities. Built on Olof Simren's original tool, enhanced with comprehensive backup/restore system.
+Business Central AL extension (v29.0, Cloud target) that enables bulk deletion of records across multiple tables with relationship validation and backup capabilities. Built on Olof Simren's original tool, enhanced with comprehensive backup/restore system.
+
+## Repo Layout
+- **`App/`**: main app (`App/app.json`, `App/src/...`), id range 50000-50099.
+- **`test/`**: separate AL test app (`test/app.json`, `test/src/...`), id range 60000-60049, depends on `App` plus Microsoft's `Library Assert`/`Any` libraries.
+- Both are true sibling folders under the repo root (neither is nested inside the other's directory tree), which is required so the AL compiler never merges their files/id ranges into a single project — see "Automated Testing" below for the history of why this matters.
 
 ## Architecture & Data Flow
 
@@ -113,12 +118,22 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 ### Build & Deploy
 - AL extension auto-compiles on save (no manual build command needed)
 - Deploy via F5 with launch.json configurations (OnPrem environments defined)
-- Object ID range: 50000-50099 (app.json)
+- Object ID range: 50000-50099 (`App/app.json`)
 
-### Testing Pattern
+### Manual Testing Pattern
 - Manual testing via "Record Deletion" page (Tell Me: search "Record Deletion")
 - Workflow: Insert/Update Tables → Suggest Records → Check Relations → Delete (with backup prompt)
 - Restore from "Table Backup List" page
+
+### Automated Testing (AL Test Toolkit)
+- Tests live in a **separate AL app** under `test/` (own `app.json`, `id`, `idRanges 60000-60049`), depending on the main app plus Microsoft's `Library Assert` and `Any` test libraries.
+- The main app used to live directly at the repo root with `test/` nested inside it, which made the AL compiler's default build (e.g. `Ctrl+Shift+B`) recursively merge `test/`'s files into the main app's project — its object IDs then collided with the main app's `50000-50099` range and `Library Assert` couldn't resolve. Moving the main app into its own `App/` folder (sibling to `test/`, not a parent of it) fixes this permanently, regardless of which folder/workspace is open.
+- Open both projects together via the **`Record-Deletion-Tool.code-workspace`** multi-root workspace file for convenience (IntelliSense across both, easy access to both Test Explorers) — this is no longer required to avoid the id-range merge bug, but is still the recommended way to work in this repo.
+- After opening the workspace file, run `AL: Download Symbols` for both projects (or use `al_downloadsymbols`) before building/running tests.
+- Test codeunits use `Subtype = Test;`, `[Test]` procedures, and `Codeunit "Library Assert"` (`Assert.AreEqual`, `Assert.IsTrue`, ...) for assertions. `TestPermissions = Disabled` is used to avoid unrelated permission-set setup for these focused unit tests.
+- `RestoreFromJSON` in `TableBackupMgt.Codeunit.al` is intentionally `internal` (not `local`) with `internalsVisibleTo` in the main `app.json` pointing at the test app's id — this lets tests exercise the restore logic directly, bypassing the interactive `ConfirmManagement.GetResponseOrDefault()` dialog in the public `RestoreBackup()`, which always resolves to its default (`false`/no-op) when `GuiAllowed()` is false, as it is during test execution.
+- Pattern for new tests: create isolated test data (prefer a dedicated buffer table in the test app over real business tables), exercise the public/internal procedure, assert on the result, clean up inserted records at the end of the test.
+- Run tests from VS Code using the AL Test Tool (Test Explorer) or `Ctrl+Shift+P` → `AL: Run Test` after publishing the test app to the sandbox in `test/.vscode/launch.json`.
 
 ### Debugging RecordRef Operations
 - Enable SQL Information Debugger in launch.json (`enableSqlInformationDebugger: true`)
@@ -151,7 +166,8 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 - TableType::Normal filter prevents errors on external/virtual tables
 
 ## Files of Interest
-- `RecordDeletionMgt.Codeunit.al`: 740+ lines, main business logic, heavily refactored for maintainability
-- `TableBackupMgt.Codeunit.al`: Complete JSON backup/restore implementation with type handling
-- `RecordDeletion.PermissionSet.al`: Security model reference for all extension objects
-- `app.json`: Platform 27.0, NoImplicitWith feature, Cloud target
+- `App/src/codeunit/RecordDeletionMgt.Codeunit.al`: 740+ lines, main business logic, heavily refactored for maintainability
+- `App/src/codeunit/TableBackupMgt.Codeunit.al`: Complete JSON backup/restore implementation with type handling
+- `App/src/permissionset/RecordDeletion.PermissionSet.al`: Security model reference for all extension objects
+- `App/app.json`: Platform 29.0, NoImplicitWith feature, Cloud target
+- `test/`: Separate AL test app (open via `Record-Deletion-Tool.code-workspace`), object ID range 60000-60049

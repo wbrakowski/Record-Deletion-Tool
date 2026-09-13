@@ -1,3 +1,8 @@
+namespace RecordDeletionTool;
+
+/// <summary>
+/// Specifies why a table backup was created.
+/// </summary>
 enum 50000 "Backup Operation Type"
 {
     Extensible = true;

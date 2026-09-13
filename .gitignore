@@ -1,13 +1,16 @@
 # App
-App/.vscode
-!App/.vscode/settings.json
+app/.vscode
+!app/.vscode/settings.json
+# Test
+test/.vscode
 # Symbols folder
 .alpackages/
 .alcache/
 .altemplates/
-.alpackages/
+.snapshots/
 # Project Output
-App/*.app
+app/*.app
+test/*.app
 
 ### Windows ###
 # Windows thumbnail cache files
@@ -35,5 +38,3 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/al,windows
-
-.vscode/launch.json

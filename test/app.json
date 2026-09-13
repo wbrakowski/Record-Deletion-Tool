@@ -1,0 +1,52 @@
+{
+  "id": "fbcdcd6f-78c4-4247-bec2-a65d54c5aacc",
+  "name": "Record-Deletion-Tool Tests",
+  "publisher": "Waldemar Brakowski",
+  "version": "1.0.0.0",
+  "brief": "",
+  "description": "Automated test suite for the Record-Deletion-Tool extension.",
+  "privacyStatement": "",
+  "EULA": "",
+  "help": "",
+  "url": "",
+  "logo": "",
+  "dependencies": [
+    {
+      "id": "cafd90e7-34f2-4ff9-ae7e-ae1210bc1842",
+      "name": "Record-Deletion-Tool",
+      "publisher": "Waldemar Brakowski",
+      "version": "1.0.0.0"
+    },
+    {
+      "id": "dd0be2ea-f733-4d65-bb34-a28f4624fb14",
+      "name": "Library Assert",
+      "publisher": "Microsoft",
+      "version": "29.0.0.0"
+    },
+    {
+      "id": "e7320ebb-08b3-4406-b1ec-b4927d3e280b",
+      "name": "Any",
+      "publisher": "Microsoft",
+      "version": "29.0.0.0"
+    }
+  ],
+  "screenshots": [],
+  "platform": "29.0.0.0",
+  "application": "29.0.0.0",
+  "idRanges": [
+    {
+      "from": 60000,
+      "to": 60049
+    }
+  ],
+  "resourceExposurePolicy": {
+    "allowDebugging": true,
+    "allowDownloadingSource": true,
+    "includeSourceInSymbolFile": true
+  },
+  "runtime": "18.0",
+  "features": [
+    "NoImplicitWith"
+  ],
+  "target": "Cloud"
+}

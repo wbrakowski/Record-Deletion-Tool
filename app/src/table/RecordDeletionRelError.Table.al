@@ -1,3 +1,10 @@
+namespace RecordDeletionTool;
+
+using System.Reflection;
+
+/// <summary>
+/// Logs table relation errors found while checking records before deletion.
+/// </summary>
 table 50001 "Record Deletion Rel. Error"
 {
     Caption = 'Record Deletion Rel. Error';

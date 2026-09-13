@@ -1,3 +1,8 @@
+namespace RecordDeletionTool;
+
+/// <summary>
+/// Specifies the storage format used to create a table backup.
+/// </summary>
 enum 50001 "Backup Type"
 {
     Extensible = true;

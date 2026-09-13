@@ -113,7 +113,7 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 
 ## Technical Details
 
-- **Platform**: Business Central v27.0+
+- **Platform**: Business Central v29.0+
 - **Target**: Cloud
 - **Object ID Range**: 50000-50099
 - **Dependencies**: None (uses standard BC base app)

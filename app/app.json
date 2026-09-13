@@ -11,9 +11,16 @@
   "url": "",
   "logo": "",
   "dependencies": [],
+  "internalsVisibleTo": [
+    {
+      "id": "fbcdcd6f-78c4-4247-bec2-a65d54c5aacc",
+      "name": "Record-Deletion-Tool Tests",
+      "publisher": "Waldemar Brakowski"
+    }
+  ],
   "screenshots": [],
-   "platform": "27.0.0.0",
-  "application": "27.0.0.0",
+   "platform": "29.0.0.0",
+  "application": "29.0.0.0",
   "idRanges": [
     {
       "from": 50000,
@@ -25,7 +32,7 @@
     "allowDownloadingSource": true,
     "includeSourceInSymbolFile": true
   },
-  "runtime": "16.0",
+  "runtime": "18.0",
   "features": [
     "NoImplicitWith"
   ],

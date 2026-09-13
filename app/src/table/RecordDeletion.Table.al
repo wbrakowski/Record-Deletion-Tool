@@ -1,3 +1,10 @@
+namespace RecordDeletionTool;
+
+using System.Reflection;
+
+/// <summary>
+/// Holds the tables selected for deletion, along with their suggestion and relation-check status.
+/// </summary>
 table 50000 "Record Deletion"
 {
     Caption = 'Record Deletion';

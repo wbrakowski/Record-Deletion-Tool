@@ -1,48 +1,162 @@
+namespace RecordDeletionTool;
+
+using Microsoft.Assembly.Comment;
+using Microsoft.Assembly.Document;
+using Microsoft.Assembly.History;
+using Microsoft.Bank.Check;
+using Microsoft.Bank.DirectDebit;
+using Microsoft.Bank.Ledger;
+using Microsoft.Bank.Payment;
+using Microsoft.Bank.Reconciliation;
+using Microsoft.Bank.Reports;
+using Microsoft.Bank.Statement;
+using Microsoft.CashFlow.Forecast;
+using Microsoft.CashFlow.Setup;
+using Microsoft.CashFlow.Worksheet;
+using Microsoft.CostAccounting.Budget;
+using Microsoft.CostAccounting.Journal;
+using Microsoft.CostAccounting.Ledger;
+using Microsoft.CRM.Campaign;
+using Microsoft.CRM.Interaction;
+using Microsoft.CRM.Opportunity;
+using Microsoft.CRM.Segment;
+using Microsoft.CRM.Task;
+using Microsoft.EServices.EDocument;
+using Microsoft.Finance.Analysis;
+using Microsoft.Finance.Currency;
+using Microsoft.Finance.Dimension;
+using Microsoft.Finance.GeneralLedger.Budget;
+using Microsoft.Finance.GeneralLedger.Journal;
+using Microsoft.Finance.GeneralLedger.Ledger;
+using Microsoft.Finance.GeneralLedger.Reversal;
+using Microsoft.Finance.VAT.Ledger;
+using Microsoft.Finance.VAT.RateChange;
+using Microsoft.Finance.VAT.Reporting;
+using Microsoft.FixedAssets.Insurance;
+using Microsoft.FixedAssets.Journal;
+using Microsoft.FixedAssets.Ledger;
+using Microsoft.FixedAssets.Maintenance;
+using Microsoft.Foundation.Comment;
+using Microsoft.Foundation.Navigate;
+using Microsoft.Foundation.Period;
+using Microsoft.HumanResources.Absence;
+using Microsoft.Intercompany.Comment;
+using Microsoft.Intercompany.Dimension;
+using Microsoft.Intercompany.Inbox;
+using Microsoft.Intercompany.Outbox;
+using Microsoft.Inventory.Analysis;
+using Microsoft.Inventory.Availability;
+using Microsoft.Inventory.Costing;
+using Microsoft.Inventory.Counting.Journal;
+using Microsoft.Inventory.Item;
+using Microsoft.Inventory.Journal;
+using Microsoft.Inventory.Ledger;
+using Microsoft.Inventory.Planning;
+using Microsoft.Inventory.Reconciliation;
+using Microsoft.Inventory.Requisition;
+using Microsoft.Inventory.Setup;
+using Microsoft.Inventory.Tracking;
+using Microsoft.Inventory.Transfer;
+using Microsoft.Manufacturing.Capacity;
+using Microsoft.Manufacturing.Document;
+using Microsoft.Manufacturing.Forecast;
+using Microsoft.Manufacturing.Routing;
+using Microsoft.Projects.Project.Job;
+using Microsoft.Projects.Project.Journal;
+using Microsoft.Projects.Project.Ledger;
+using Microsoft.Projects.Project.Planning;
+using Microsoft.Projects.Project.WIP;
+using Microsoft.Projects.Resources.Journal;
+using Microsoft.Projects.Resources.Ledger;
+using Microsoft.Projects.Resources.Resource;
+using Microsoft.Projects.TimeSheet;
+using Microsoft.Purchases.Archive;
+using Microsoft.Purchases.Comment;
+using Microsoft.Purchases.Document;
+using Microsoft.Purchases.History;
+using Microsoft.Purchases.Payables;
+using Microsoft.Sales.Archive;
+using Microsoft.Sales.Comment;
+using Microsoft.Sales.Document;
+using Microsoft.Sales.FinanceCharge;
+using Microsoft.Sales.History;
+using Microsoft.Sales.Receivables;
+using Microsoft.Sales.Reminder;
+using Microsoft.Service.Comment;
+using Microsoft.Service.Contract;
+using Microsoft.Service.Document;
+using Microsoft.Service.History;
+using Microsoft.Service.Item;
+using Microsoft.Service.Ledger;
+using Microsoft.Service.Loaner;
+using Microsoft.Service.Pricing;
+using Microsoft.Utilities;
+using Microsoft.Warehouse.Activity;
+using Microsoft.Warehouse.Activity.History;
+using Microsoft.Warehouse.Document;
+using Microsoft.Warehouse.History;
+using Microsoft.Warehouse.InternalDocument;
+using Microsoft.Warehouse.InventoryDocument;
+using Microsoft.Warehouse.Journal;
+using Microsoft.Warehouse.Ledger;
+using Microsoft.Warehouse.Request;
+using Microsoft.Warehouse.Tracking;
+using Microsoft.Warehouse.Worksheet;
+using System.Automation;
+using System.Diagnostics;
+using System.Email;
+using System.Reflection;
+using System.Security.AccessControl;
+using System.Threading;
+using System.Utilities;
+
+/// <summary>
+/// Provides the record deletion workflow: table suggestion, relation checking, backup and deletion.
+/// </summary>
 codeunit 50000 "Record Deletion Mgt."
 {
-    Permissions = tabledata "Record Deletion" = RIMD,
-                  tabledata "Record Deletion Rel. Error" = RIMD,
-                  tabledata "Bank Account Ledger Entry" = IMD,
-                  tabledata "Change Log Entry" = IMD,
-                  tabledata "Cust. Ledger Entry" = IMD,
-                  tabledata "Detailed Cust. Ledg. Entry" = IMD,
-                  tabledata "Detailed Vendor Ledg. Entry" = IMD,
-                  tabledata "Dimension Set Entry" = IMD,
-                  //   Tabledata 3905 = IMD,
-                  tabledata "FA Ledger Entry" = IMD,
-tabledata "G/L Entry" = IMD,
-                  tabledata "G/L Entry - VAT Entry Link" = IMD,
-                  tabledata "G/L Register" = IMD,
-                  tabledata "Gen. Journal Line" = IMD,
-                  tabledata "Issued Reminder Line" = IMD,
-                  tabledata "Item Application Entry" = IMD,
-                  tabledata "Item Ledger Entry" = IMD,
-                  tabledata "Job Ledger Entry" = IMD,
-                  tabledata "Phys. Inventory Ledger Entry" = IMD,
-                  tabledata "Purch. Cr. Memo Hdr." = IMD,
-                  tabledata "Purch. Cr. Memo Line" = IMD,
-                  tabledata "Purch. Inv. Header" = IMD,
-                  tabledata "Purch. Inv. Line" = IMD,
-                  tabledata "Purch. Rcpt. Header" = IMD,
-                  tabledata "Purch. Rcpt. Line" = IMD,
-                  tabledata "Purchase Header" = IMD,
-                  tabledata "Purchase Line" = IMD,
-                  tabledata "Reminder/Fin. Charge Entry" = IMD,
-                  tabledata "Return Receipt Line" = IMD,
-                  tabledata "Return Shipment Header" = IMD,
-                  tabledata "Return Shipment Line" = IMD,
-                  tabledata "Sales Cr.Memo Header" = IMD,
-                  tabledata "Sales Cr.Memo Line" = IMD,
-                  tabledata "Sales Header" = IMD,
-                  tabledata "Sales Invoice Header" = IMD,
-                  tabledata "Sales Invoice Line" = IMD,
-                  tabledata "Sales Line" = IMD,
-                  tabledata "Sales Shipment Header" = IMD,
-                  tabledata "Sales Shipment Line" = IMD,
-                  tabledata "Value Entry" = IMD,
-                  tabledata "VAT Entry" = IMD,
-                  tabledata "Vendor Ledger Entry" = IMD;
-    procedure InsertUpdateTables()
+    Permissions = tabledata "Bank Account Ledger Entry" = imd,
+                  tabledata "Change Log Entry" = imd,
+                  tabledata "Cust. Ledger Entry" = imd,
+                  tabledata "Detailed Cust. Ledg. Entry" = imd,
+                  tabledata "Detailed Vendor Ledg. Entry" = imd,
+                  tabledata "Dimension Set Entry" = imd,
+                  tabledata "FA Ledger Entry" = imd,
+                  tabledata "G/L Entry" = imd,
+                  tabledata "G/L Entry - VAT Entry Link" = imd,
+                  tabledata "G/L Register" = imd,
+                  tabledata "Gen. Journal Line" = imd,
+                  tabledata "Issued Reminder Line" = imd,
+                  tabledata "Item Application Entry" = imd,
+                  tabledata "Item Ledger Entry" = imd,
+                  tabledata "Job Ledger Entry" = imd,
+                  tabledata "Phys. Inventory Ledger Entry" = imd,
+                  tabledata "Purch. Cr. Memo Hdr." = imd,
+                  tabledata "Purch. Cr. Memo Line" = imd,
+                  tabledata "Purch. Inv. Header" = imd,
+                  tabledata "Purch. Inv. Line" = imd,
+                  tabledata "Purch. Rcpt. Header" = imd,
+                  tabledata "Purch. Rcpt. Line" = imd,
+                  tabledata "Purchase Header" = imd,
+                  tabledata "Purchase Line" = imd,
+                  tabledata "Record Deletion" = rimd,
+                  tabledata "Record Deletion Rel. Error" = rimd,
+                  tabledata "Reminder/Fin. Charge Entry" = imd,
+                  tabledata "Return Receipt Line" = imd,
+                  tabledata "Return Shipment Header" = imd,
+                  tabledata "Return Shipment Line" = imd,
+                  tabledata "Sales Cr.Memo Header" = imd,
+                  tabledata "Sales Cr.Memo Line" = imd,
+                  tabledata "Sales Header" = imd,
+                  tabledata "Sales Invoice Header" = imd,
+                  tabledata "Sales Invoice Line" = imd,
+                  tabledata "Sales Line" = imd,
+                  tabledata "Sales Shipment Header" = imd,
+                  tabledata "Sales Shipment Line" = imd,
+                  tabledata "Value Entry" = imd,
+                  tabledata "VAT Entry" = imd,
+                  tabledata "Vendor Ledger Entry" = imd;
+    internal procedure InsertUpdateTables()
     var
         AllObjWithCaption: Record AllObjWithCaption;
         RecordDeletion: Record "Record Deletion";
@@ -50,17 +164,18 @@ tabledata "G/L Entry" = IMD,
         AllObjWithCaption.SetRange("Object Type", AllObjWithCaption."Object Type"::Table);
         // Do not include system tables
         AllObjWithCaption.SetFilter("Object ID", '< %1', 2000000001);
+        AllObjWithCaption.SetLoadFields("Object ID");
         if AllObjWithCaption.FindSet() then
             repeat
                 RecordDeletion.Init();
-                RecordDeletion."Table ID" := AllObjWithCaption."Object ID";
-                RecordDeletion.Company := CopyStr(CompanyName(), 1, MaxStrLen(RecordDeletion.Company));
+                RecordDeletion.Validate("Table ID", AllObjWithCaption."Object ID");
+                RecordDeletion.Validate(Company, CopyStr(CompanyName(), 1, MaxStrLen(RecordDeletion.Company)));
                 if not RecordDeletion.Insert(true) then
                     continue;
             until AllObjWithCaption.Next() = 0;
     end;
 
-    procedure SuggestRecordsToDelete()
+    internal procedure SuggestRecordsToDelete()
     var
         RecordDeletion: Record "Record Deletion";
         AfterSuggestionDeleteCount: Integer;
@@ -437,14 +552,14 @@ tabledata "G/L Entry" = IMD,
         SetSuggestedTable(Database::"Posted Assembly Line");
     end;
 
-    procedure ClearRecordsToDelete()
+    internal procedure ClearRecordsToDelete()
     var
         RecordDeletion: Record "Record Deletion";
     begin
         RecordDeletion.ModifyAll("Delete Records", false, true);
     end;
 
-    procedure DeleteRecords(RunTrigger: Boolean)
+    internal procedure DeleteRecords(RunTrigger: Boolean)
     var
         ConfirmManagement: Codeunit "Confirm Management";
         CreateBackup: Boolean;
@@ -495,16 +610,18 @@ tabledata "G/L Entry" = IMD,
     begin
         UpdateDialog.Open(CreatingBackupTxt);
 
+        RecordDeletion.SetLoadFields("Table ID", "Delete Records");
         if RecordDeletion.FindSet() then
             repeat
-                if RecordDeletion."Delete Records" then begin
-                    UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
-                    TableBackupMgt.CreateBackup(
-                        RecordDeletion."Table ID",
-                        BackupType::"JSON Export",
-                        BackupOperationType::"Before Deletion",
-                        CopyStr(StrSubstNo(BackupDescriptionTxt, RunTrigger), 1, 250));
-                end;
+                if not RecordDeletion."Delete Records" then
+                    continue;
+
+                UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
+                TableBackupMgt.CreateBackup(
+                    RecordDeletion."Table ID",
+                    BackupType::"JSON Export",
+                    BackupOperationType::"Before Deletion",
+                    CopyStr(StrSubstNo(BackupDescriptionTxt, RunTrigger), 1, 250));
             until RecordDeletion.Next() = 0;
 
         UpdateDialog.Close();
@@ -520,28 +637,32 @@ tabledata "G/L Entry" = IMD,
     begin
         UpdateDialog.Open(DeletingRecordsTxt);
 
+        RecordDeletion.SetLoadFields("Table ID", "Delete Records");
         if RecordDeletion.FindSet() then
             repeat
-                if RecordDeletion."Delete Records" then begin
-                    UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
-                    RecordRef.Open(RecordDeletion."Table ID");
-                    RecordRef.DeleteAll(RunTrigger);
-                    RecordRef.Close();
-                    RecordDeletionRelError.SetRange("Table ID", RecordDeletion."Table ID");
-                    RecordDeletionRelError.DeleteAll(true);
-                end;
+                if not RecordDeletion."Delete Records" then
+                    continue;
+
+                UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
+                RecordRef.Open(RecordDeletion."Table ID");
+                RecordRef.DeleteAll(RunTrigger);
+                RecordRef.Close();
+                RecordDeletionRelError.SetRange("Table ID", RecordDeletion."Table ID");
+                RecordDeletionRelError.DeleteAll(true);
             until RecordDeletion.Next() = 0;
 
         UpdateDialog.Close();
     end;
 
-    procedure CheckTableRelations()
+    internal procedure CheckTableRelations()
     var
         RecordDeletion: Record "Record Deletion";
         RecordDeletionRelError: Record "Record Deletion Rel. Error";
         ConfirmManagement: Codeunit "Confirm Management";
         UpdateDialog: Dialog;
-        CheckingRelationsTxt: Label 'Checking Relations Between Records!\Table: #1#######', Comment = '%1 = Table ID';
+        TotalCount: Integer;
+        ProcessedCount: Integer;
+        CheckingRelationsTxt: Label 'Checking Relations Between Records!\Table: #1#######\Name: #2##################\Progress: #3##########', Comment = '%1 = Table ID, %2 = Table Name, %3 = Progress percentage';
         CheckRelationsQst: Label 'Check Table Relations?';
     begin
         if not ConfirmManagement.GetResponseOrDefault(CheckRelationsQst, false) then
@@ -550,9 +671,15 @@ tabledata "G/L Entry" = IMD,
         UpdateDialog.Open(CheckingRelationsTxt);
         RecordDeletionRelError.DeleteAll(false);
 
+        RecordDeletion.SetLoadFields("Table ID");
+        RecordDeletion.SetAutoCalcFields("Table Name");
+        TotalCount := RecordDeletion.Count();
         if RecordDeletion.FindSet() then
             repeat
+                ProcessedCount += 1;
                 UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
+                UpdateDialog.Update(2, RecordDeletion."Table Name");
+                UpdateDialog.Update(3, Format(ProcessedCount * 100 div TotalCount) + '%');
                 CheckTableRelationsForTable(RecordDeletion."Table ID");
             until RecordDeletion.Next() = 0;
 
@@ -605,9 +732,28 @@ tabledata "G/L Entry" = IMD,
     var
         FieldRef: FieldRef;
     begin
+        // Skip system audit fields: they reference a reserved system user with no matching User record
+        if Field."No." in [2000000002, 2000000004] then // SystemCreatedBy, SystemModifiedBy
+            exit;
+
         FieldRef := RecordRef.Field(Field."No.");
-        if (Format(FieldRef.Value()) <> '') and (Format(FieldRef.Value()) <> '0') then
-            ValidateFieldRelation(RecordRef, FieldRef, Field);
+        if IsBlankRelationValue(FieldRef) then
+            exit;
+
+        ValidateFieldRelation(RecordRef, FieldRef, Field);
+    end;
+
+    local procedure IsBlankRelationValue(var FieldRef: FieldRef): Boolean
+    var
+        GuidValue: Guid;
+    begin
+        // An empty GUID (e.g. an unused Dataverse/tax integration field) never resolves to a real record
+        if FieldRef.Type() = FieldType::GUID then begin
+            GuidValue := FieldRef.Value();
+            exit(IsNullGuid(GuidValue));
+        end;
+
+        exit((Format(FieldRef.Value()) = '') or (Format(FieldRef.Value()) = '0'));
     end;
 
     local procedure ValidateFieldRelation(var RecordRef: RecordRef; var FieldRef: FieldRef; Field: Record Field)
@@ -625,6 +771,8 @@ tabledata "G/L Entry" = IMD,
         end else
             FieldRefInitialized := GetPrimaryKeyFieldRef(Field.RelationTableNo, RecordRef2, FieldRef2);
 
+        // Keep this nested: FieldRef2 is unassigned when FieldRefInitialized is false, and AL does not
+        // short-circuit "and" here, so combining both conditions would call FieldRef2.Type() on an unassigned FieldRef.
         if FieldRefInitialized then
             if (FieldRef.Type() = FieldRef2.Type()) and (FieldRef.Length() = FieldRef2.Length()) then
                 CheckRelationExists(RecordRef, FieldRef, RecordRef2, FieldRef2);
@@ -638,16 +786,18 @@ tabledata "G/L Entry" = IMD,
         KeyRec: Record "Key";
         CouldNotGetKeyErr: Label 'Could not get key for table %1', Comment = '%1 = Table ID';
     begin
+        KeyRec.SetLoadFields(Key);
         if not KeyRec.Get(TableNo, 1) then  // PK
             Error(CouldNotGetKeyErr, TableNo);
 
         Field2.SetRange(TableNo, TableNo);
         Field2.SetFilter(FieldName, CopyStr(KeyRec.Key, 1, 30));
-        if Field2.FindFirst() then begin // No Match if Dual PK
-            FieldRef2 := RecordRef2.Field(Field2."No.");
-            exit(true);
-        end;
-        exit(false);
+        Field2.SetLoadFields("No.");
+        if not Field2.FindFirst() then // No Match if Dual PK
+            exit(false);
+
+        FieldRef2 := RecordRef2.Field(Field2."No.");
+        exit(true);
     end;
 
     local procedure CheckRelationExists(var RecordRef: RecordRef; var FieldRef: FieldRef; var RecordRef2: RecordRef; var FieldRef2: FieldRef)
@@ -667,29 +817,29 @@ tabledata "G/L Entry" = IMD,
             EntryNo := 1;
 
         RecordDeletionRelError.Init();
-        RecordDeletionRelError."Table ID" := RecordRef.Number();
-        RecordDeletionRelError."Entry No." := EntryNo;
-        RecordDeletionRelError."Field No." := FieldRef.Number();
-        RecordDeletionRelError.Error := CopyStr(StrSubstNo(NotExistsTxt, Format(RecordRef.GetPosition()), Format(FieldRef2.Name()), Format(FieldRef.Value()), Format(RecordRef2.Name())), 1, 250);
+        RecordDeletionRelError.Validate("Table ID", RecordRef.Number());
+        RecordDeletionRelError.Validate("Entry No.", EntryNo);
+        RecordDeletionRelError.Validate("Field No.", FieldRef.Number());
+        RecordDeletionRelError.Validate(Error, CopyStr(StrSubstNo(NotExistsTxt, Format(RecordRef.GetPosition()), Format(FieldRef2.Name()), Format(FieldRef.Value()), Format(RecordRef2.Name())), 1, 250));
         RecordDeletionRelError.Insert(false);
     end;
 
-    procedure ViewRecords(RecordDeletion: Record "Record Deletion")
+    internal procedure ViewRecords(RecordDeletion: Record "Record Deletion")
     begin
         Hyperlink(GetUrl(ClientType::Current, CompanyName(), ObjectType::Table, RecordDeletion."Table ID"));
     end;
 
-    procedure SetSuggestedTable(TableID: Integer)
+    internal procedure SetSuggestedTable(TableID: Integer)
     var
         RecordDeletion: Record "Record Deletion";
     begin
         if not RecordDeletion.Get(TableID) then
             exit;
-        RecordDeletion."Delete Records" := true;
+        RecordDeletion.Validate("Delete Records", true);
         RecordDeletion.Modify(true);
     end;
 
-    procedure CalcRecordsInTable(TableNoToCheck: Integer): Integer
+    internal procedure CalcRecordsInTable(TableNoToCheck: Integer): Integer
     var
         Field: Record Field;
         RecordRef: RecordRef;
@@ -705,20 +855,23 @@ tabledata "G/L Entry" = IMD,
         exit(NoOfRecords);
     end;
 
-    procedure SuggestUnlicensedPartnerOrCustomRecordsToDelete()
+    internal procedure SuggestUnlicensedPartnerOrCustomRecordsToDelete()
     var
         RecordDeletion: Record "Record Deletion";
         RecsSuggestedCount: Integer;
         RecordsSuggestedMsg: Label '%1 unlicensed partner or custom records were suggested.', Comment = '%1 number of unlicensed records';
     begin
         RecordDeletion.SetFilter("Table ID", '> %1', 49999);
+        RecordDeletion.SetLoadFields("Table ID");
         if RecordDeletion.FindSet(false) then
             repeat
-                if not IsRecordStandardTable(RecordDeletion."Table ID") then
-                    if not IsRecordInLicense(RecordDeletion."Table ID") then begin
-                        SetSuggestedTable(RecordDeletion."Table ID");
-                        RecsSuggestedCount += 1;
-                    end;
+                if IsRecordStandardTable(RecordDeletion."Table ID") then
+                    continue;
+                if IsRecordInLicense(RecordDeletion."Table ID") then
+                    continue;
+
+                SetSuggestedTable(RecordDeletion."Table ID");
+                RecsSuggestedCount += 1;
             until RecordDeletion.Next() = 0;
 
         Message(RecordsSuggestedMsg, RecsSuggestedCount);
@@ -728,6 +881,7 @@ tabledata "G/L Entry" = IMD,
     var
         LicensePermission: Record "License Permission";
     begin
+        LicensePermission.SetLoadFields("Read Permission", "Insert Permission", "Modify Permission", "Delete Permission", "Execute Permission");
         // LicensePermission.Get(LicensePermission."Object Type"::Table, TableID);
         if not LicensePermission.Get(LicensePermission."Object Type"::TableData, TableID) then
             exit(false);
@@ -738,9 +892,8 @@ tabledata "G/L Entry" = IMD,
             (LicensePermission."Delete Permission" = LicensePermission."Delete Permission"::" ") and
             (LicensePermission."Execute Permission" = LicensePermission."Execute Permission"::" ")
         then
-            exit(false)
-        else
-            exit(true);
+            exit(false);
+        exit(true);
     end;
 
     local procedure IsRecordStandardTable(TableID: Integer): Boolean

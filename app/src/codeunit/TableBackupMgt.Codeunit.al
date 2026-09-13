@@ -1,8 +1,16 @@
+namespace RecordDeletionTool;
+
+using System.Reflection;
+using System.Utilities;
+
+/// <summary>
+/// Creates, restores, exports and imports backups of table data.
+/// </summary>
 codeunit 50001 "Table Backup Mgt."
 {
-    Permissions = tabledata "Table Backup" = RIMD;
+    Permissions = tabledata "Table Backup" = rimd;
 
-    procedure CreateBackup(TableID: Integer; BackupType: Enum "Backup Type"; OperationType: Enum "Backup Operation Type"; BackupDescription: Text[250]): Integer
+    internal procedure CreateBackup(TableID: Integer; BackupType: Enum "Backup Type"; OperationType: Enum "Backup Operation Type"; BackupDescription: Text[250]): Integer
     var
         TableBackup: Record "Table Backup";
         RecordRef: RecordRef;
@@ -16,14 +24,14 @@ codeunit 50001 "Table Backup Mgt."
             BackupTypeToUse := BackupTypeToUse::"JSON Export";
 
         TableBackup.Init();
-        TableBackup."Table ID" := TableID;
-        TableBackup."Backup Type" := BackupTypeToUse;
-        TableBackup."Operation Type" := OperationType;
-        TableBackup.Description := BackupDescription;
+        TableBackup.Validate("Table ID", TableID);
+        TableBackup.Validate("Backup Type", BackupTypeToUse);
+        TableBackup.Validate("Operation Type", OperationType);
+        TableBackup.Validate(Description, BackupDescription);
         TableBackup.Insert(true);
 
         RecordRef.Open(TableID);
-        TableBackup."No. of Records" := RecordRef.Count();
+        TableBackup.Validate("No. of Records", RecordRef.Count());
         RecordRef.Close();
 
         // Show progress dialog
@@ -50,7 +58,7 @@ codeunit 50001 "Table Backup Mgt."
         exit(TableBackup."Entry No.");
     end;
 
-    procedure CreateBackupWithFilter(TableID: Integer; BackupType: Enum "Backup Type"; OperationType: Enum "Backup Operation Type"; BackupDescription: Text[250]; FilterView: Text): Integer
+    internal procedure CreateBackupWithFilter(TableID: Integer; BackupType: Enum "Backup Type"; OperationType: Enum "Backup Operation Type"; BackupDescription: Text[250]; FilterView: Text): Integer
     var
         TableBackup: Record "Table Backup";
         RecordRef: RecordRef;
@@ -64,16 +72,16 @@ codeunit 50001 "Table Backup Mgt."
             BackupTypeToUse := BackupTypeToUse::"JSON Export";
 
         TableBackup.Init();
-        TableBackup."Table ID" := TableID;
-        TableBackup."Backup Type" := BackupTypeToUse;
-        TableBackup."Operation Type" := OperationType;
-        TableBackup.Description := BackupDescription;
-        TableBackup."Filter View" := CopyStr(FilterView, 1, MaxStrLen(TableBackup."Filter View"));
+        TableBackup.Validate("Table ID", TableID);
+        TableBackup.Validate("Backup Type", BackupTypeToUse);
+        TableBackup.Validate("Operation Type", OperationType);
+        TableBackup.Validate(Description, BackupDescription);
+        TableBackup.Validate("Filter View", CopyStr(FilterView, 1, MaxStrLen(TableBackup."Filter View")));
         TableBackup.Insert(true);
 
         RecordRef.Open(TableID);
         RecordRef.SetView(FilterView);
-        TableBackup."No. of Records" := RecordRef.Count();
+        TableBackup.Validate("No. of Records", RecordRef.Count());
         RecordRef.Close();
 
         // Show progress dialog
@@ -118,8 +126,8 @@ codeunit 50001 "Table Backup Mgt."
 
         TableBackup."Backup Data".CreateOutStream(OutStream, TextEncoding::UTF8);
         OutStream.WriteText(JSONText);
-        TableBackup."Backup Size (KB)" := Round(StrLen(JSONText) / 1024, 0.01);
-        TableBackup."File Name" := CopyStr(GetBackupFileName(TableBackup), 1, MaxStrLen(TableBackup."File Name"));
+        TableBackup.Validate("Backup Size (KB)", Round(StrLen(JSONText) / 1024, 0.01));
+        TableBackup.Validate("File Name", CopyStr(GetBackupFileName(TableBackup), 1, MaxStrLen(TableBackup."File Name")));
 
         if GuiAllowed() then
             ProgressDialog.Update(3, 'Backup completed');
@@ -144,8 +152,8 @@ codeunit 50001 "Table Backup Mgt."
 
         TableBackup."Backup Data".CreateOutStream(OutStream, TextEncoding::UTF8);
         OutStream.WriteText(JSONText);
-        TableBackup."Backup Size (KB)" := Round(StrLen(JSONText) / 1024, 0.01);
-        TableBackup."File Name" := CopyStr(GetBackupFileName(TableBackup), 1, MaxStrLen(TableBackup."File Name"));
+        TableBackup.Validate("Backup Size (KB)", Round(StrLen(JSONText) / 1024, 0.01));
+        TableBackup.Validate("File Name", CopyStr(GetBackupFileName(TableBackup), 1, MaxStrLen(TableBackup."File Name")));
 
         if GuiAllowed() then
             ProgressDialog.Update(3, 'Backup completed');
@@ -234,23 +242,14 @@ codeunit 50001 "Table Backup Mgt."
 
     local procedure CreateSnapshotTable(var TableBackup: Record "Table Backup"; var ProgressDialog: Dialog)
     var
-        SourceRecordRef: RecordRef;
         SnapshotTableId: Integer;
     begin
         // Create temporary copy using a naming convention
         SnapshotTableId := GetNextSnapshotTableId();
-        TableBackup."Snapshot Table ID" := SnapshotTableId;
+        TableBackup.Validate("Snapshot Table ID", SnapshotTableId);
 
-        // Copy all records to temporary table
-        SourceRecordRef.Open(TableBackup."Table ID");
-        if SourceRecordRef.FindSet() then
-            repeat
-            // Store in JSON as snapshot tables are complex to manage
-            // In real implementation, you might use temp tables or external storage
-            until SourceRecordRef.Next() = 0;
-        SourceRecordRef.Close();
-
-        // For simplicity, we store snapshots as JSON too
+        // For simplicity, we store snapshots as JSON too (snapshot tables are complex to manage;
+        // in a real implementation, you might use temp tables or external storage instead)
         ExportTableToJSON(TableBackup, ProgressDialog);
     end;
 
@@ -271,7 +270,7 @@ codeunit 50001 "Table Backup Mgt."
         ExportTableToJSONWithFilter(TableBackup, FilterView, ProgressDialog);
     end;
 
-    procedure RestoreBackup(var TableBackup: Record "Table Backup")
+    internal procedure RestoreBackup(var TableBackup: Record "Table Backup")
     var
         ConfirmManagement: Codeunit "Confirm Management";
         RestoreConfirmQst: Label 'Do you want to restore %1 records to table %2? This will INSERT the backed up records.\\Warning: This may create duplicate records if they still exist!', Comment = '%1 = No. of Records, %2 = Table ID';
@@ -287,15 +286,16 @@ codeunit 50001 "Table Backup Mgt."
                 RestoreFromSnapshot(TableBackup);
         end;
 
-        TableBackup.Restored := true;
-        TableBackup."Restore Date Time" := CurrentDateTime();
+        TableBackup.Validate(Restored, true);
+        TableBackup.Validate("Restore Date Time", CurrentDateTime());
         TableBackup.Modify(true);
 
         Message(StrSubstNo(BackupRestoredMsg, TableBackup."No. of Records", TableBackup."Table Name"));
     end;
 
 #pragma warning disable LC0010, LC0090
-    local procedure RestoreFromJSON(var TableBackup: Record "Table Backup")
+    // internal (not local) so the test app can exercise the restore logic directly, bypassing the interactive confirm dialog
+    internal procedure RestoreFromJSON(var TableBackup: Record "Table Backup")
     var
         RecordRef: RecordRef;
         InStream: InStream;
@@ -471,6 +471,8 @@ codeunit 50001 "Table Backup Mgt."
                 AssignDateTimeValue(FieldRef, FieldValue);
             Field.Type::GUID:
                 AssignGuidValue(FieldRef, FieldValue);
+            Field.Type::Option:
+                AssignOptionValue(FieldRef, FieldValue);
             else
                 AssignTextValue(FieldRef, FieldValue);
         end;
@@ -482,7 +484,7 @@ codeunit 50001 "Table Backup Mgt."
         IntegerValue: Integer;
     begin
         if Evaluate(IntegerValue, FieldValue) then
-            FieldRef.Value := IntegerValue;
+            FieldRef.Value(IntegerValue);
     end;
 
     local procedure AssignDecimalValue(var FieldRef: FieldRef; FieldValue: Text)
@@ -490,7 +492,7 @@ codeunit 50001 "Table Backup Mgt."
         DecimalValue: Decimal;
     begin
         if Evaluate(DecimalValue, FieldValue) then
-            FieldRef.Value := DecimalValue;
+            FieldRef.Value(DecimalValue);
     end;
 
     local procedure AssignBooleanValue(var FieldRef: FieldRef; FieldValue: Text)
@@ -498,7 +500,7 @@ codeunit 50001 "Table Backup Mgt."
         BooleanValue: Boolean;
     begin
         if Evaluate(BooleanValue, FieldValue) then
-            FieldRef.Value := BooleanValue;
+            FieldRef.Value(BooleanValue);
     end;
 
     local procedure AssignDateValue(var FieldRef: FieldRef; FieldValue: Text)
@@ -506,7 +508,7 @@ codeunit 50001 "Table Backup Mgt."
         DateValue: Date;
     begin
         if Evaluate(DateValue, FieldValue) then
-            FieldRef.Value := DateValue;
+            FieldRef.Value(DateValue);
     end;
 
     local procedure AssignTimeValue(var FieldRef: FieldRef; FieldValue: Text)
@@ -514,7 +516,7 @@ codeunit 50001 "Table Backup Mgt."
         TimeValue: Time;
     begin
         if Evaluate(TimeValue, FieldValue) then
-            FieldRef.Value := TimeValue;
+            FieldRef.Value(TimeValue);
     end;
 
     local procedure AssignDateTimeValue(var FieldRef: FieldRef; FieldValue: Text)
@@ -522,7 +524,7 @@ codeunit 50001 "Table Backup Mgt."
         DateTimeValue: DateTime;
     begin
         if Evaluate(DateTimeValue, FieldValue) then
-            FieldRef.Value := DateTimeValue;
+            FieldRef.Value(DateTimeValue);
     end;
 
     local procedure AssignGuidValue(var FieldRef: FieldRef; FieldValue: Text)
@@ -530,16 +532,34 @@ codeunit 50001 "Table Backup Mgt."
         GuidValue: Guid;
     begin
         if Evaluate(GuidValue, FieldValue) then
-            FieldRef.Value := GuidValue;
+            FieldRef.Value(GuidValue);
+    end;
+
+    local procedure AssignOptionValue(var FieldRef: FieldRef; FieldValue: Text)
+    var
+        OptionCaptions: List of [Text];
+        OptionCaption: Text;
+        OptionIndex: Integer;
+    begin
+        // Option/Enum values are exported by caption, so look up the matching ordinal by caption
+        OptionCaptions := FieldRef.OptionCaption().Split(',');
+        OptionIndex := 0;
+        foreach OptionCaption in OptionCaptions do begin
+            if OptionCaption = FieldValue then begin
+                FieldRef.Value(OptionIndex);
+                exit;
+            end;
+            OptionIndex += 1;
+        end;
     end;
 
     local procedure AssignTextValue(var FieldRef: FieldRef; FieldValue: Text)
     begin
         // For Text, Code and other types, assign directly
         if FieldRef.Length() > 0 then
-            FieldRef.Value := CopyStr(FieldValue, 1, FieldRef.Length())
+            FieldRef.Value(CopyStr(FieldValue, 1, FieldRef.Length()))
         else
-            FieldRef.Value := FieldValue;
+            FieldRef.Value(FieldValue);
     end;
 
     local procedure RestoreFromSnapshot(var TableBackup: Record "Table Backup")
@@ -548,7 +568,7 @@ codeunit 50001 "Table Backup Mgt."
         RestoreFromJSON(TableBackup);
     end;
 
-    procedure ExportBackupToFile(var TableBackup: Record "Table Backup")
+    internal procedure ExportBackupToFile(var TableBackup: Record "Table Backup")
     var
         InStream: InStream;
         FileName: Text;
@@ -564,7 +584,7 @@ codeunit 50001 "Table Backup Mgt."
         DownloadFromStream(InStream, ExportBackupTxt, '', FileFilterTxt, FileName);
     end;
 
-    procedure ViewBackupData(var TableBackup: Record "Table Backup")
+    internal procedure ViewBackupData(var TableBackup: Record "Table Backup")
     var
         InStream: InStream;
         JSONText: Text;
@@ -580,9 +600,11 @@ codeunit 50001 "Table Backup Mgt."
         Message(ViewBackupDataMsg, TableBackup."Entry No.", CopyStr(JSONText, 1, 1000));
     end;
 
-    procedure DeleteSnapshotTable(SnapshotTableID: Integer)
+    internal procedure DeleteSnapshotTable(SnapshotTableID: Integer)
     begin
-        // Cleanup of snapshot resources if needed
+        // Cleanup of snapshot resources if needed - no-op if there is nothing to clean up
+        if SnapshotTableID = 0 then
+            exit;
         // In this implementation, snapshots are stored as JSON
     end;
 
@@ -591,6 +613,7 @@ codeunit 50001 "Table Backup Mgt."
         TableBackup: Record "Table Backup";
     begin
         TableBackup.SetFilter("Snapshot Table ID", '<>0');
+        TableBackup.SetLoadFields("Snapshot Table ID");
         if TableBackup.FindLast() then
             exit(TableBackup."Snapshot Table ID" + 1);
         exit(99000001); // Starting point for snapshot table IDs
@@ -606,7 +629,7 @@ codeunit 50001 "Table Backup Mgt."
         exit(StrSubstNo(FileNameTxt, TableBackup."Table ID", DelChr(TableBackup."Table Name", '=', ' /\*?<>|":'), DateTimeText));
     end;
 
-    procedure ImportBackupFromFile(TableID: Integer): Integer
+    internal procedure ImportBackupFromFile(TableID: Integer): Integer
     var
         TableBackup: Record "Table Backup";
         InStream: InStream;
@@ -618,21 +641,21 @@ codeunit 50001 "Table Backup Mgt."
             exit(0);
 
         TableBackup.Init();
-        TableBackup."Table ID" := TableID;
-        TableBackup."Backup Type" := TableBackup."Backup Type"::"JSON Export";
-        TableBackup."Operation Type" := TableBackup."Operation Type"::"Manual Backup";
-        TableBackup.Description := CopyStr(StrSubstNo(ImportedFromFileTxt, FileName), 1, MaxStrLen(TableBackup.Description));
-        TableBackup."File Name" := CopyStr(FileName, 1, MaxStrLen(TableBackup."File Name"));
+        TableBackup.Validate("Table ID", TableID);
+        TableBackup.Validate("Backup Type", TableBackup."Backup Type"::"JSON Export");
+        TableBackup.Validate("Operation Type", TableBackup."Operation Type"::"Manual Backup");
+        TableBackup.Validate(Description, CopyStr(StrSubstNo(ImportedFromFileTxt, FileName), 1, MaxStrLen(TableBackup.Description)));
+        TableBackup.Validate("File Name", CopyStr(FileName, 1, MaxStrLen(TableBackup."File Name")));
         TableBackup.Insert(true);
 
         // Read and store the JSON
         InStream.ReadText(JSONText);
         TableBackup."Backup Data".CreateOutStream(OutStream, TextEncoding::UTF8);
         OutStream.WriteText(JSONText);
-        TableBackup."Backup Size (KB)" := Round(StrLen(JSONText) / 1024, 0.01);
+        TableBackup.Validate("Backup Size (KB)", Round(StrLen(JSONText) / 1024, 0.01));
 
         // Count records in JSON
-        TableBackup."No. of Records" := CountRecordsInJSON(JSONText);
+        TableBackup.Validate("No. of Records", CountRecordsInJSON(JSONText));
         TableBackup.Modify(true);
 
         Message(ImportSuccessMsg, TableBackup."No. of Records", FileName);
