@@ -1,5 +1,7 @@
 namespace RecordDeletionTool.Test;
 
+using RecordDeletionTool;
+
 table 60000 "Test Buffer"
 {
     Caption = 'Test Buffer';
@@ -64,6 +66,21 @@ table 60000 "Test Buffer"
             Caption = 'Related System ID';
             TableRelation = "Test Buffer".SystemId;
             ToolTip = 'Specifies a related test buffer record by SystemId, used to test GUID-based relation checks.';
+        }
+        field(12; "Operation Type Value"; Enum "Backup Operation Type")
+        {
+            Caption = 'Operation Type Value';
+            ToolTip = 'Specifies an enum value used for round-trip testing of ordinal-based backup and restore.';
+        }
+        field(13; "Record ID Value"; RecordId)
+        {
+            Caption = 'Record ID Value';
+            ToolTip = 'Specifies a RecordID value, used to test that an unparseable field value during restore fails only that record instead of aborting the whole restore.';
+        }
+        field(14; "Media Value"; Media)
+        {
+            Caption = 'Media Value';
+            ToolTip = 'Specifies a Media value, used to test that a table with a Media field on every record can still be fully backed up and restored.';
         }
     }
 

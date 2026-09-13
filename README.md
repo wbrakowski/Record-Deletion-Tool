@@ -21,11 +21,12 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 
 ### 💾 Comprehensive Backup System
 - **Automatic backup prompts** before deletion operations
-- **Three backup types**: JSON Export, Snapshot, Full Backup
+- **Three backup types**: JSON Export, Snapshot, Full Backup (Snapshot and Full Backup currently use the same JSON-based storage as JSON Export)
 - **JSON-based storage** for easy portability and inspection
 - **One-click restore** to recover deleted data
 - **Export/Import** backup files for archival or transfer
 - **Backup metadata** tracking (user, date/time, operation type)
+- **Note**: Only a fixed set of field types can be backed up (numbers, text, dates/times, GUID, options/enums). Fields with other types (BLOB, Media, MediaSet, RecordID, etc.) are skipped and cannot be restored. A confirmation is shown before backing up an affected table - once per table when creating a single backup, and once for the whole batch (listing all affected tables) when backing up multiple tables before a bulk deletion
 
 ### 🎯 Smart Table Suggestions
 - Pre-configured suggestions for common deletion scenarios
@@ -169,6 +170,9 @@ A: Review the errors by clicking on the error count. You may need to delete rela
 
 **Q: "Backup restoration fails"**  
 A: Check that the table structure hasn't changed since the backup was created. Some records may fail if validation rules have been added.
+
+**Q: "A field is empty after restoring a backup"**  
+A: Fields with unsupported types (BLOB, Media, MediaSet, RecordID, etc.) are skipped during backup and cannot be restored. This is expected for any table containing such fields.
 
 **Q: "Deletion is very slow"**  
 A: Use "Delete Records (without Trigger)" for faster deletion. Triggers can significantly slow down bulk operations.

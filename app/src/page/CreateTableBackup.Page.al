@@ -52,7 +52,7 @@ page 50004 "Create Table Backup"
                 field(BackupTypeField; BackupType)
                 {
                     Caption = 'Backup Type';
-                    ToolTip = 'Specifies the type of backup to create.';
+                    ToolTip = 'Specifies the type of backup to create. Snapshot and Full Backup are currently stored in the same JSON format as JSON Export.';
                 }
                 field(DescriptionField; BackupDescription)
                 {
@@ -128,9 +128,13 @@ page 50004 "Create Table Backup"
 
         // Create the backup
         if UseFilter and (FilterView <> '') then
-            EntryNo := TableBackupMgt.CreateBackupWithFilter(TableID, BackupType, BackupOperationType::"Manual Backup", BackupDescription, FilterView)
+            EntryNo := TableBackupMgt.CreateBackupWithFilter(TableID, BackupType, BackupOperationType::"Manual Backup", BackupDescription, FilterView, true)
         else
-            EntryNo := TableBackupMgt.CreateBackup(TableID, BackupType, BackupOperationType::"Manual Backup", BackupDescription);
+            EntryNo := TableBackupMgt.CreateBackup(TableID, BackupType, BackupOperationType::"Manual Backup", BackupDescription, true);
+
+        // EntryNo = 0 means the user declined the BLOB/Media confirmation - keep the dialog open
+        if EntryNo = 0 then
+            exit(false);
 
         Message(SuccessMsg, EntryNo);
         exit(true);

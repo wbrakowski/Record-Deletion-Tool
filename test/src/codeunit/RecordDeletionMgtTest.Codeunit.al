@@ -181,7 +181,7 @@ codeunit 60001 "RecordDeletionMgt Test"
         BackupCountBefore := TableBackup.Count();
 
         // [WHEN] Backups are created for all flagged tables
-        RecordDeletionMgt.CreateBackupsForDeletion(false);
+        Assert.IsTrue(RecordDeletionMgt.CreateBackupsForDeletion(false), 'Backup creation should not be aborted (no unsupported field types involved).');
 
         // [THEN] Exactly one new backup was created for the flagged table
         TableBackup.SetRange("Table ID", Database::"Test Buffer");

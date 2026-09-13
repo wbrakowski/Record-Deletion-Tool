@@ -570,7 +570,8 @@ codeunit 50000 "Record Deletion Mgt."
         CreateBackup := AskForBackup(ConfirmManagement);
 
         if CreateBackup then
-            CreateBackupsForDeletion(RunTrigger);
+            if not CreateBackupsForDeletion(RunTrigger) then
+                exit;
 
         PerformDeletion(RunTrigger);
     end;
@@ -599,7 +600,7 @@ codeunit 50000 "Record Deletion Mgt."
     end;
 
     // internal (not local) so the test app can exercise backup creation for flagged tables directly, without the confirm dialogs
-    internal procedure CreateBackupsForDeletion(RunTrigger: Boolean)
+    internal procedure CreateBackupsForDeletion(RunTrigger: Boolean): Boolean
     var
         RecordDeletion: Record "Record Deletion";
         TableBackupMgt: Codeunit "Table Backup Mgt.";
@@ -609,6 +610,9 @@ codeunit 50000 "Record Deletion Mgt."
         CreatingBackupTxt: Label 'Creating Backup!\Table: #1#######', Comment = '%1 = Table ID';
         BackupDescriptionTxt: Label 'Backup before deletion (RunTrigger=%1)', Comment = '%1 = RunTrigger value';
     begin
+        if not ConfirmBackupForFlaggedTablesWithUnsupportedFields(TableBackupMgt) then
+            exit(false);
+
         UpdateDialog.Open(CreatingBackupTxt);
 
         RecordDeletion.SetLoadFields("Table ID", "Delete Records");
@@ -618,14 +622,52 @@ codeunit 50000 "Record Deletion Mgt."
                     continue;
 
                 UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
+                // ConfirmUnsupportedFields = false: the aggregate confirmation above already covered every
+                // flagged table once - asking again per table here would defeat the whole point of that
                 TableBackupMgt.CreateBackup(
                     RecordDeletion."Table ID",
                     BackupType::"JSON Export",
                     BackupOperationType::"Before Deletion",
-                    CopyStr(StrSubstNo(BackupDescriptionTxt, RunTrigger), 1, 250));
+                    CopyStr(StrSubstNo(BackupDescriptionTxt, RunTrigger), 1, 250),
+                    false);
             until RecordDeletion.Next() = 0;
 
         UpdateDialog.Close();
+        exit(true);
+    end;
+
+    // Collects every flagged table with a field type that cannot be backed up and asks about all of them
+    // in a single confirmation, instead of interrupting the bulk backup loop once per affected table.
+    local procedure ConfirmBackupForFlaggedTablesWithUnsupportedFields(var TableBackupMgt: Codeunit "Table Backup Mgt."): Boolean
+    var
+        RecordDeletion: Record "Record Deletion";
+        ConfirmManagement: Codeunit "Confirm Management";
+        AffectedTablesText: Text;
+        TablesContainUnsupportedFieldsQst: Label 'The following table(s) contain field type(s) that cannot be backed up (e.g. BLOB, Media, RecordID); those fields will be skipped and cannot be restored:\\%1\\Do you want to continue?', Comment = '%1 = Comma-separated list of affected tables';
+    begin
+        RecordDeletion.SetRange("Delete Records", true);
+        RecordDeletion.SetLoadFields("Table ID");
+        if RecordDeletion.FindSet() then
+            repeat
+                if TableBackupMgt.TableHasBlobFields(RecordDeletion."Table ID") then
+                    AffectedTablesText := AddToAffectedTablesText(AffectedTablesText, RecordDeletion."Table ID", TableBackupMgt.GetTableCaption(RecordDeletion."Table ID"));
+            until RecordDeletion.Next() = 0;
+
+        if AffectedTablesText = '' then
+            exit(true);
+        if not GuiAllowed() then
+            exit(true);
+
+        exit(ConfirmManagement.GetResponseOrDefault(StrSubstNo(TablesContainUnsupportedFieldsQst, AffectedTablesText), true));
+    end;
+
+    local procedure AddToAffectedTablesText(AffectedTablesText: Text; TableID: Integer; TableCaption: Text): Text
+    var
+        TableEntryLbl: Label '%1 %2', Comment = '%1 = Table ID, %2 = Table Caption';
+    begin
+        if AffectedTablesText <> '' then
+            AffectedTablesText += ', ';
+        exit(AffectedTablesText + StrSubstNo(TableEntryLbl, TableID, TableCaption));
     end;
 
     // internal (not local) so the test app can exercise the deletion logic directly, without the confirm dialogs
@@ -692,6 +734,7 @@ codeunit 50000 "Record Deletion Mgt."
     internal procedure CheckTableRelationsForTable(TableID: Integer)
     var
         TableMetadata: Record "Table Metadata";
+        TempRelationField: Record Field temporary;
         RecordRef: RecordRef;
     begin
         // Only allow "normal" tables to avoid errors, Skip TableType MicrosoftGraph and CRM etc.
@@ -700,50 +743,89 @@ codeunit 50000 "Record Deletion Mgt."
         if TableMetadata.IsEmpty() then
             exit;
 
+        CollectRelationFields(TableID, TempRelationField);
+        if TempRelationField.IsEmpty() then
+            exit;
+
         RecordRef.Open(TableID);
-        if RecordRef.FindSet() then
-            repeat
-                CheckRecordRelations(RecordRef);
-            until RecordRef.Next() = 0;
+        CheckRelationsForFields(RecordRef, TempRelationField);
         RecordRef.Close();
     end;
 
-    local procedure CheckRecordRelations(var RecordRef: RecordRef)
+    // Loads the relevant field metadata once per table into a temporary buffer, instead of re-querying
+    // the Field system table for every single data record (major performance gain on large tables).
+    local procedure CollectRelationFields(TableID: Integer; var TempRelationField: Record Field temporary)
     var
         Field: Record Field;
     begin
-        Field.SetRange(TableNo, RecordRef.Number());
+        Field.SetRange(TableNo, TableID);
         Field.SetRange(Class, Field.Class::Normal);
         Field.SetRange(ObsoleteState, Field.ObsoleteState::No);
         Field.SetFilter(RelationTableNo, '<>0');
 
-        // Next 4 lines look funny but are needed to avoid this error:
+        // Next 2 lines look funny but are needed to avoid this error:
         // "Table connection for table type CRM must be registered using RegisterTableConnection or cmdlet New-NAVTableConnection before it can be used"
-        if RecordRef.Number() = 5330 then
-            Field.SetFilter("No.", '<> %1', 124)
-        else
-            if RecordRef.Number() = 7200 then
-                Field.SetFilter("No.", '<> %1', 124);
+        if TableID in [5330, 7200] then
+            Field.SetFilter("No.", '<> %1', 124);
 
         if Field.FindSet() then
             repeat
-                CheckFieldRelation(RecordRef, Field);
+                TempRelationField := Field;
+                TempRelationField.Insert(false);
             until Field.Next() = 0;
     end;
 
-    local procedure CheckFieldRelation(var RecordRef: RecordRef; Field: Record Field)
+    local procedure CheckRelationsForFields(var RecordRef: RecordRef; var TempRelationField: Record Field temporary)
+    begin
+        if TempRelationField.FindSet() then
+            repeat
+                CheckRelationsForField(RecordRef, TempRelationField);
+            until TempRelationField.Next() = 0;
+    end;
+
+    // Opens the related table and resolves the target FieldRef only once per field, then reuses both
+    // across every data record - instead of re-opening the related table for every single record.
+    local procedure CheckRelationsForField(var RecordRef: RecordRef; Field: Record Field)
     var
+        RecordRef2: RecordRef;
         FieldRef: FieldRef;
+        FieldRef2: FieldRef;
     begin
         // Skip system audit fields: they reference a reserved system user with no matching User record
         if Field."No." in [2000000002, 2000000004] then // SystemCreatedBy, SystemModifiedBy
             exit;
 
+        RecordRef2.Open(Field.RelationTableNo);
+        if not ResolveRelationFieldRef(Field, RecordRef2, FieldRef2) then begin
+            RecordRef2.Close();
+            exit;
+        end;
+
         FieldRef := RecordRef.Field(Field."No.");
+        if (FieldRef.Type() = FieldRef2.Type()) and (FieldRef.Length() = FieldRef2.Length()) then
+            if RecordRef.FindSet() then
+                repeat
+                    CheckFieldRelationForRecord(RecordRef, FieldRef, RecordRef2, FieldRef2);
+                until RecordRef.Next() = 0;
+
+        RecordRef2.Close();
+    end;
+
+    local procedure ResolveRelationFieldRef(Field: Record Field; var RecordRef2: RecordRef; var FieldRef2: FieldRef): Boolean
+    begin
+        if Field.RelationFieldNo <> 0 then begin
+            FieldRef2 := RecordRef2.Field(Field.RelationFieldNo);
+            exit(true);
+        end;
+        exit(GetPrimaryKeyFieldRef(Field.RelationTableNo, RecordRef2, FieldRef2));
+    end;
+
+    local procedure CheckFieldRelationForRecord(var RecordRef: RecordRef; var FieldRef: FieldRef; var RecordRef2: RecordRef; var FieldRef2: FieldRef)
+    begin
         if IsBlankRelationValue(FieldRef) then
             exit;
 
-        ValidateFieldRelation(RecordRef, FieldRef, Field);
+        CheckRelationExists(RecordRef, FieldRef, RecordRef2, FieldRef2);
     end;
 
     local procedure IsBlankRelationValue(var FieldRef: FieldRef): Boolean
@@ -757,30 +839,6 @@ codeunit 50000 "Record Deletion Mgt."
         end;
 
         exit((Format(FieldRef.Value()) = '') or (Format(FieldRef.Value()) = '0'));
-    end;
-
-    local procedure ValidateFieldRelation(var RecordRef: RecordRef; var FieldRef: FieldRef; Field: Record Field)
-    var
-        RecordRef2: RecordRef;
-        FieldRef2: FieldRef;
-        FieldRefInitialized: Boolean;
-    begin
-        RecordRef2.Open(Field.RelationTableNo);
-        FieldRefInitialized := false;
-
-        if Field.RelationFieldNo <> 0 then begin
-            FieldRef2 := RecordRef2.Field(Field.RelationFieldNo);
-            FieldRefInitialized := true;
-        end else
-            FieldRefInitialized := GetPrimaryKeyFieldRef(Field.RelationTableNo, RecordRef2, FieldRef2);
-
-        // Keep this nested: FieldRef2 is unassigned when FieldRefInitialized is false, and AL does not
-        // short-circuit "and" here, so combining both conditions would call FieldRef2.Type() on an unassigned FieldRef.
-        if FieldRefInitialized then
-            if (FieldRef.Type() = FieldRef2.Type()) and (FieldRef.Length() = FieldRef2.Length()) then
-                CheckRelationExists(RecordRef, FieldRef, RecordRef2, FieldRef2);
-
-        RecordRef2.Close();
     end;
 
     local procedure GetPrimaryKeyFieldRef(TableNo: Integer; var RecordRef2: RecordRef; var FieldRef2: FieldRef): Boolean
