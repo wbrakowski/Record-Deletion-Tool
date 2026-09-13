@@ -1,0 +1,15 @@
+{
+    "folders": [
+        {
+            "name": "Record-Deletion-Tool",
+            "path": "app"
+        },
+        {
+            "name": "Record-Deletion-Tool Tests",
+            "path": "test"
+        }
+    ],
+    "settings": {
+        "al.symbolsCountryRegion": "de"
+    }
+}

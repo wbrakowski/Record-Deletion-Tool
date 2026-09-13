@@ -294,7 +294,8 @@ codeunit 50001 "Table Backup Mgt."
     end;
 
 #pragma warning disable LC0010, LC0090
-    local procedure RestoreFromJSON(var TableBackup: Record "Table Backup")
+    // internal (not local) so the test app can exercise the restore logic directly, bypassing the interactive confirm dialog
+    internal procedure RestoreFromJSON(var TableBackup: Record "Table Backup")
     var
         RecordRef: RecordRef;
         InStream: InStream;

@@ -1,7 +1,13 @@
 # Record Deletion Tool - Copilot Instructions
 
 ## Project Overview
-Business Central AL extension (v27.0, Cloud target) that enables bulk deletion of records across multiple tables with relationship validation and backup capabilities. Built on Olof Simren's original tool, enhanced with comprehensive backup/restore system.
+Business Central AL extension (v29.0, Cloud target) that enables bulk deletion of records across multiple tables with relationship validation and backup capabilities. Built on Olof Simren's original tool, enhanced with comprehensive backup/restore system.
+
+## Repo Layout
+- **`app/`**: main app (`app/app.json`, `app/src/...`), id range 50000-50099, namespace `RecordDeletionTool`.
+- **`test/`**: separate AL test app (`test/app.json`, `test/src/...`), id range 60000-60049, namespace `RecordDeletionTool.Test`, depends on `app` plus Microsoft's `Library Assert`/`Any` libraries.
+- Both are true sibling folders under the repo root (neither is nested inside the other's directory tree), which is required so the AL compiler never merges their files/id ranges into a single project — see "Automated Testing" below for the history of why this matters.
+- Open both together via **`Record-Deletion-Tool.code-workspace`** (multi-root workspace).
 
 ## Architecture & Data Flow
 
@@ -31,6 +37,10 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 ```
 
 ## AL-Specific Patterns
+
+### Namespaces (BC29+)
+- All app files declare `namespace RecordDeletionTool;` (test app: `namespace RecordDeletionTool.Test;`) as the first line, per the AA0247 analyzer rule.
+- Once a file declares a `namespace`, unqualified references outside that namespace tree need an explicit `using` statement (e.g. `using System.Reflection;`, `using System.Utilities;`, `using System.TestLibraries.Utilities;`, or `using RecordDeletionTool;` from the test app) — otherwise compilation fails with "X is missing"/"name does not exist". `using` statements must be alphabetically sorted (AA0477).
 
 ### RecordRef/FieldRef Dynamic Operations
 - Use `RecordRef.Open(TableID)` for dynamic table access
@@ -113,12 +123,47 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 ### Build & Deploy
 - AL extension auto-compiles on save (no manual build command needed)
 - Deploy via F5 with launch.json configurations (OnPrem environments defined)
-- Object ID range: 50000-50099 (app.json)
+- Object ID range: 50000-50099 (`app/app.json`)
 
-### Testing Pattern
+### Manual Testing Pattern
 - Manual testing via "Record Deletion" page (Tell Me: search "Record Deletion")
 - Workflow: Insert/Update Tables → Suggest Records → Check Relations → Delete (with backup prompt)
 - Restore from "Table Backup List" page
+
+### Automated Testing (AL Test Toolkit)
+- Tests live in a **separate AL app** under `test/` (own `app.json`, `id`, `idRanges 60000-60049`), depending on the main app plus Microsoft's `Library Assert` and `Any` test libraries.
+- The main app used to live directly at the repo root with `test/` nested inside it, which made the AL compiler's default build (e.g. `Ctrl+Shift+B`) recursively merge `test/`'s files into the main app's project — its object IDs then collided with the main app's `50000-50099` range and `Library Assert` couldn't resolve. Moving the main app into its own `app/` folder (sibling to `test/`, not a parent of it) fixes this permanently, regardless of which folder/workspace is open.
+- Open both projects together via the **`Record-Deletion-Tool.code-workspace`** multi-root workspace file for convenience (IntelliSense across both, easy access to both Test Explorers) — this is no longer required to avoid the id-range merge bug, but is still the recommended way to work in this repo.
+- After opening the workspace file, run `AL: Download Symbols` for both projects (or use `al_downloadsymbols`) before building/running tests. Build with `al_build scope='all'`, then publish each project separately (`al_publish`, focusing `app/app.json` then `test/app.json` first).
+- Test codeunits use `Subtype = Test;`, `[Test]` procedures, and `Codeunit "Library Assert"` (`Assert.AreEqual`, `Assert.IsTrue`, `Assert.RecordCount`, `Assert.AreNotEqual`, ...) for assertions. `TestPermissions = Disabled` is used to avoid unrelated permission-set setup for these focused unit tests.
+- Test files declare `namespace RecordDeletionTool.Test;` and need `using RecordDeletionTool;` (for main-app types like `Table Backup Mgt.`, `Record Deletion Mgt.`, `Table Backup`, `Record Deletion`) and `using System.TestLibraries.Utilities;` (for `Library Assert`).
+
+**`internal` procedures exposed purely for testability** (all follow the same pattern: the public entry point is gated by `ConfirmManagement.GetResponseOrDefault(..., false)`, which always resolves to its default/no-op because `GuiAllowed()` is `false` during test execution — so tests call the underlying `internal` procedure directly, bypassing the interactive confirm dialog; each has an `internalsVisibleTo` entry in `app/app.json` pointing at the test app's id):
+- `TableBackupMgt.RestoreFromJSON` (was `local`) — exercised by `RestoreBackup()` normally.
+- `RecordDeletionMgt.CheckTableRelationsForTable` (was `local`) — exercised by `CheckTableRelations()` normally.
+- `RecordDeletionMgt.PerformDeletion` (was `local`) — exercised by `DeleteRecords()` normally.
+- `RecordDeletionMgt.CreateBackupsForDeletion` (was `local`) — exercised by `DeleteRecords()` normally.
+
+**Safety guard for destructive tests**: `PerformDeletion` and `CreateBackupsForDeletion` iterate over **every** `"Record Deletion"` row with `Delete Records = true`, not just the test's own row. A test calling them directly could delete real data if the sandbox already has other tables flagged from earlier interactive use of the tool. Tests for these two procedures therefore start with:
+  ```al
+  RecordDeletion.SetRange("Delete Records", true);
+  Assert.IsTrue(RecordDeletion.IsEmpty(), 'Aborting: another table is already flagged for deletion in this environment.');
+  ```
+  before setting up their own test data. Apply this same guard to any new test that calls one of these two procedures.
+
+- `test/src/table/TestBuffer.Table.al` (id 60000) is the shared dummy table for both test codeunits. It intentionally carries extra fields beyond simple round-trip data so relation-check tests have something to exercise: `"Related No."` (Code, self `TableRelation` to `"No."`) and `"Related System ID"` (Guid, self `TableRelation` to `SystemId`) — used to verify `CheckTableRelationsForTable` detects both Code-based and GUID-based dangling references while ignoring valid/blank ones.
+- Current test codeunits: `TableBackupMgtTest` (id 60000) covers all 3 backup types (JSON Export, Snapshot, Full Backup), filtered backups, full round-trip restore across every field type (Integer/Decimal/Boolean/Date/Time/DateTime/Guid/Text), `ViewBackupData`/`ExportBackupToFile` error guards (via `asserterror`), and `DeleteSnapshotTable`. `RecordDeletionMgtTest` (id 60001) covers `SetSuggestedTable`, `ClearRecordsToDelete`, `CalcRecordsInTable`, `CheckTableRelationsForTable` (Code and GUID relation errors), `PerformDeletion`, and `CreateBackupsForDeletion`.
+- **Deliberately NOT covered**, with reasons — don't attempt to test these without discussing the tradeoff first:
+  - `InsertUpdateTables()`, `SuggestRecordsToDelete()`, all 11 `SetSuggestedXTables()` helpers — scan/flag every table in the environment or a large hardcoded list; too slow/environment-dependent for a unit test.
+  - `SuggestUnlicensedPartnerOrCustomRecordsToDelete`, `IsRecordInLicense`, `IsRecordStandardTable` — depend on the environment's license/permission data, not deterministic.
+  - `DeleteRecords()`, `RestoreBackup()` (the public, confirm-gated entry points) — thin orchestration already covered by testing their internal building blocks directly.
+  - `ViewRecords` — just calls `Hyperlink()`, nothing to assert.
+  - The "dual primary key" fallback branch in `GetPrimaryKeyFieldRef` and the `SystemCreatedBy`/`SystemModifiedBy` skip branch in `CheckFieldRelation` — not reliably forceable/verifiable without live test execution (see session notes if picking this up).
+  - The real `DownloadFromStream` success path in `ExportBackupToFile` — only the `Error(NoBackupDataErr)` guard clause is tested; behavior of an actual client download when `GuiAllowed()` is `false` wasn't empirically verified.
+- **AL test pitfall**: inserting a record and then immediately calling code that does `CalcFields` on a Blob field (e.g. `ViewBackupData`, `ExportBackupToFile`) can fail with "The X does not exist" even though the row was just inserted — `Get()`/`Find()` right after `Insert()` do NOT fix this. Call `Commit();` right after `Insert()` before invoking the code under test. Whenever a test calls `Commit()`, it MUST also carry `[TransactionModel(TransactionModel::AutoCommit)]` on the `[Test]` procedure (default test transaction model is `AutoRollback`, which doesn't match a test that commits) — and still manually clean up the row afterwards, since `Commit()` breaks the automatic rollback isolation for that data.
+- **AL test pitfall**: a bare `asserterror SomeCall();` only proves *some* error occurred, not the *expected* one — a regression that throws a different error (e.g. a permission error instead of the intended validation error) would still pass. Always follow `asserterror` with `Assert.ExpectedError('<exact error text>');` (or `ExpectedErrorCode`) to pin down which error was expected.
+- Pattern for new tests: create isolated test data (prefer `Test Buffer` over real business tables), exercise the public/internal procedure, assert on the result, clean up inserted records (and any `Record Deletion`/`Record Deletion Rel. Error`/`Table Backup` rows created) at the end of the test.
+- Run tests from VS Code using the AL Test Tool (Test Explorer) or `Ctrl+Shift+P` → `AL: Run Test`/`AL: Run All Tests` after publishing the test app to the sandbox in `test/.vscode/launch.json`. `AL: Run All Tests with Coverage` additionally reports which lines of the main app were exercised, at the cost of a slower run.
 
 ### Debugging RecordRef Operations
 - Enable SQL Information Debugger in launch.json (`enableSqlInformationDebugger: true`)
@@ -151,7 +196,11 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 - TableType::Normal filter prevents errors on external/virtual tables
 
 ## Files of Interest
-- `RecordDeletionMgt.Codeunit.al`: 740+ lines, main business logic, heavily refactored for maintainability
-- `TableBackupMgt.Codeunit.al`: Complete JSON backup/restore implementation with type handling
-- `RecordDeletion.PermissionSet.al`: Security model reference for all extension objects
-- `app.json`: Platform 27.0, NoImplicitWith feature, Cloud target
+- `app/src/codeunit/RecordDeletionMgt.Codeunit.al`: 740+ lines, main business logic, heavily refactored for maintainability
+- `app/src/codeunit/TableBackupMgt.Codeunit.al`: Complete JSON backup/restore implementation with type handling
+- `app/src/permissionset/RecordDeletion.PermissionSet.al`: Security model reference for all extension objects
+- `app/app.json`: Platform 29.0, NoImplicitWith feature, Cloud target, `internalsVisibleTo` the test app
+- `test/src/codeunit/TableBackupMgtTest.Codeunit.al` (id 60000): backup/restore tests (all backup types, all field types, filtered backups)
+- `test/src/codeunit/RecordDeletionMgtTest.Codeunit.al` (id 60001): deletion/relation-check tests
+- `test/src/table/TestBuffer.Table.al` (id 60000): dummy table used by both test codeunits, with self-relation fields for relation-check tests
+- `test/`: Separate AL test app (open via `Record-Deletion-Tool.code-workspace`), object ID range 60000-60049

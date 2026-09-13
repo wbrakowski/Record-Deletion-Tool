@@ -11,6 +11,13 @@
   "url": "",
   "logo": "",
   "dependencies": [],
+  "internalsVisibleTo": [
+    {
+      "id": "fbcdcd6f-78c4-4247-bec2-a65d54c5aacc",
+      "name": "Record-Deletion-Tool Tests",
+      "publisher": "Waldemar Brakowski"
+    }
+  ],
   "screenshots": [],
    "platform": "29.0.0.0",
   "application": "29.0.0.0",
