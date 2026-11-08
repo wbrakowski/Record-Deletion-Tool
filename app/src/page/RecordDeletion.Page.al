@@ -10,7 +10,6 @@ page 50000 "Record Deletion"
     PageType = List;
     SourceTable = "Record Deletion";
     UsageCategory = Lists;
-    PromotedActionCategories = 'New,Process,Report,Tables,Suggest,Deletion,Backup';
 
     layout
     {
@@ -26,8 +25,8 @@ page 50000 "Record Deletion"
                 }
                 field(NoOfRecords; RecordDeletionMgt.CalcRecordsInTable(Rec."Table ID"))
                 {
-                    CaptionML = ENU = 'No. of Records';
-                    ToolTip = 'Specifies the value of the CalcRecordsInTable(Rec.Table ID) field.';
+                    Caption = 'No. of Records';
+                    ToolTip = 'Specifies the number of records in the table.';
                 }
                 field("No. of Table Relation Errors"; Rec."No. of Table Relation Errors")
                 {
@@ -35,10 +34,6 @@ page 50000 "Record Deletion"
                 field("Delete Records"; Rec."Delete Records")
                 {
                 }
-                // field(Company; Company)
-                // {
-                //     ApplicationArea = All;
-                // }
             }
         }
     }
@@ -48,13 +43,9 @@ page 50000 "Record Deletion"
         {
             action(InsertUpdateTables)
             {
-                CaptionML = ENU = 'Insert/Update Tables';
+                Caption = 'Insert/Update Tables';
                 Image = Refresh;
-                Promoted = true;
-                PromotedCategory = Category4;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the InsertUpdateTables action.';
+                ToolTip = 'Adds all tables of the environment to the list that are not protected.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.InsertUpdateTables();
@@ -62,13 +53,9 @@ page 50000 "Record Deletion"
             }
             action(SuggestsRecords)
             {
-                CaptionML = ENU = 'Suggest Records to Delete';
+                Caption = 'Suggest Records to Delete';
                 Image = Suggest;
-                Promoted = true;
-                PromotedCategory = Category5;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the SuggestsRecords action.';
+                ToolTip = 'Flags the standard tables that usually contain transaction data for deletion.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.SuggestRecordsToDelete();
@@ -76,13 +63,9 @@ page 50000 "Record Deletion"
             }
             action(SuggestsUnlicensedPartnerOrCustomRecords)
             {
-                CaptionML = ENU = 'Suggest Unlicensed Partner or Custom Records to Delete';
+                Caption = 'Suggest Unlicensed Partner or Custom Records to Delete';
                 Image = Suggest;
-                Promoted = true;
-                PromotedCategory = Category5;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the SuggestsUnlicensedPartnerOrCustomRecords action.';
+                ToolTip = 'Flags custom tables that are not covered by your license for deletion.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.SuggestUnlicensedPartnerOrCustomRecordsToDelete();
@@ -90,13 +73,9 @@ page 50000 "Record Deletion"
             }
             action(ClearRecords)
             {
-                CaptionML = ENU = 'Clear Records to Delete';
-                Image = Delete;
-                Promoted = true;
-                PromotedCategory = Category6;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the ClearRecords action.';
+                Caption = 'Clear Records to Delete';
+                Image = ClearLog;
+                ToolTip = 'Clears the Delete Records flag on all tables.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.ClearRecordsToDelete();
@@ -104,13 +83,9 @@ page 50000 "Record Deletion"
             }
             action(DeleteRecords)
             {
-                CaptionML = ENU = 'Delete Records (no trigger!)';
+                Caption = 'Delete Records (no trigger!)';
                 Image = Delete;
-                Promoted = true;
-                PromotedCategory = Category6;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the DeleteRecords action.';
+                ToolTip = 'Deletes all records of the flagged tables without running the delete triggers. A backup can be created first.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.DeleteRecords(false);
@@ -118,13 +93,9 @@ page 50000 "Record Deletion"
             }
             action(DeleteRecordsWithTrigger)
             {
-                CaptionML = ENU = 'Delete Records (with trigger!)';
+                Caption = 'Delete Records (with trigger!)';
                 Image = Delete;
-                Promoted = true;
-                PromotedCategory = Category6;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the DeleteRecordsWithTrigger action.';
+                ToolTip = 'Deletes all records of the flagged tables and runs the delete triggers. A backup can be created first.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.DeleteRecords(true);
@@ -132,13 +103,9 @@ page 50000 "Record Deletion"
             }
             action(CheckTableRelations)
             {
-                CaptionML = ENU = 'Check Table Relations';
+                Caption = 'Check Table Relations';
                 Image = Relationship;
-                Promoted = true;
-                PromotedCategory = Category4;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the CheckTableRelations action.';
+                ToolTip = 'Checks whether records point to related records that do not exist and lists the errors per table.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.CheckTableRelations();
@@ -146,13 +113,9 @@ page 50000 "Record Deletion"
             }
             action(ViewRecords)
             {
-                CaptionML = ENU = 'View Records';
+                Caption = 'View Records';
                 Image = Table;
-                Promoted = true;
-                PromotedCategory = Category4;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Executes the ViewRecords action.';
+                ToolTip = 'Opens the records of the selected table.';
                 trigger OnAction()
                 begin
                     RecordDeletionMgt.ViewRecords(Rec);
@@ -164,16 +127,76 @@ page 50000 "Record Deletion"
                 AboutTitle = 'Manage Table Backups';
                 Caption = 'Manage Backups';
                 Image = Archive;
-                Promoted = true;
-                PromotedCategory = Category7;
-                PromotedIsBig = true;
-                PromotedOnly = true;
                 ToolTip = 'Opens the table backup management where you can view, create, restore and export/import backups.';
 
                 trigger OnAction()
                 begin
                     Page.Run(Page::"Table Backup List");
                 end;
+            }
+            action(DeletionLog)
+            {
+                Caption = 'Deletion Log';
+                Image = Log;
+                ToolTip = 'Opens the log of the tables whose records were deleted with this tool.';
+
+                trigger OnAction()
+                begin
+                    Page.Run(Page::"Record Deletion Log");
+                end;
+            }
+        }
+        area(Promoted)
+        {
+            group(Category_Tables)
+            {
+                Caption = 'Tables';
+
+                actionref(InsertUpdateTables_Promoted; InsertUpdateTables)
+                {
+                }
+                actionref(CheckTableRelations_Promoted; CheckTableRelations)
+                {
+                }
+                actionref(ViewRecords_Promoted; ViewRecords)
+                {
+                }
+            }
+            group(Category_Suggest)
+            {
+                Caption = 'Suggest';
+
+                actionref(SuggestsRecords_Promoted; SuggestsRecords)
+                {
+                }
+                actionref(SuggestsUnlicensedPartnerOrCustomRecords_Promoted; SuggestsUnlicensedPartnerOrCustomRecords)
+                {
+                }
+            }
+            group(Category_Deletion)
+            {
+                Caption = 'Deletion';
+
+                actionref(ClearRecords_Promoted; ClearRecords)
+                {
+                }
+                actionref(DeleteRecords_Promoted; DeleteRecords)
+                {
+                }
+                actionref(DeleteRecordsWithTrigger_Promoted; DeleteRecordsWithTrigger)
+                {
+                }
+            }
+            group(Category_Backup)
+            {
+                Caption = 'Backup';
+
+                actionref(ManageBackups_Promoted; ManageBackups)
+                {
+                }
+                actionref(DeletionLog_Promoted; DeletionLog)
+                {
+                }
             }
         }
     }

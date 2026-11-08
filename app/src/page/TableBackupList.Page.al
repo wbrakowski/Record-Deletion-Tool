@@ -85,10 +85,6 @@ page 50002 "Table Backup List"
             {
                 Caption = 'Create Backup';
                 Image = Export;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
                 ToolTip = 'Create a new backup of a table.';
 
                 trigger OnAction()
@@ -104,10 +100,6 @@ page 50002 "Table Backup List"
                 Caption = 'Restore Backup';
                 Enabled = Rec."Entry No." <> 0;
                 Image = Import;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
                 ToolTip = 'Restore records from the selected backup.';
 
                 trigger OnAction()
@@ -121,10 +113,6 @@ page 50002 "Table Backup List"
                 Caption = 'Export to File';
                 Enabled = Rec."Entry No." <> 0;
                 Image = ExportFile;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
                 ToolTip = 'Export the backup data to a JSON file.';
 
                 trigger OnAction()
@@ -136,10 +124,6 @@ page 50002 "Table Backup List"
             {
                 Caption = 'Import from File';
                 Image = ImportExcel;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
                 ToolTip = 'Import backup data from a JSON file.';
 
                 trigger OnAction()
@@ -158,11 +142,7 @@ page 50002 "Table Backup List"
                 Caption = 'View Backup Data';
                 Enabled = Rec."Entry No." <> 0;
                 Image = View;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Specifies that the backup data (first 1000 characters) will be displayed.';
+                ToolTip = 'Displays the first 1000 characters of the backup data.';
 
                 trigger OnAction()
                 begin
@@ -173,11 +153,7 @@ page 50002 "Table Backup List"
             {
                 Caption = 'Delete Old Backups';
                 Image = Delete;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Delete backups older than a specified number of days.';
+                ToolTip = 'Delete backups older than 30 days.';
 
                 trigger OnAction()
                 var
@@ -207,6 +183,27 @@ page 50002 "Table Backup List"
                     Message(DeletedMsg, DeletedCount);
                     CurrPage.Update(false);
                 end;
+            }
+        }
+        area(Promoted)
+        {
+            actionref(CreateBackup_Promoted; CreateBackup)
+            {
+            }
+            actionref(RestoreBackup_Promoted; RestoreBackup)
+            {
+            }
+            actionref(ExportToFile_Promoted; ExportToFile)
+            {
+            }
+            actionref(ImportFromFile_Promoted; ImportFromFile)
+            {
+            }
+            actionref(ViewData_Promoted; ViewData)
+            {
+            }
+            actionref(DeleteOldBackups_Promoted; DeleteOldBackups)
+            {
             }
         }
     }

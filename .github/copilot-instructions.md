@@ -19,14 +19,18 @@ Business Central AL extension (v29.0, Cloud target) that enables bulk deletion o
 
 2. **Backup System** (`TableBackup.Table.al`, `TableBackupMgt.Codeunit.al`)
    - JSON-based serialization of table data stored in BLOB fields
-   - Three backup types: JSON Export, Snapshot, Full Backup (all use JSON internally)
-   - Operations tracked via `Backup Operation Type` enum (Manual, Before Deletion, etc.)
+   - Three backup types: JSON Export, Snapshot, Full Backup (all use JSON internally; Snapshot additionally reserves a `Snapshot Table ID` that nothing else uses)
+   - Operations tracked via `Backup Operation Type` enum (Manual, Before Deletion; `Before Modification` and `Scheduled Backup` are obsolete-pending because nothing creates them)
    - **Critical workflow**: Always create backup before deletion (integrated in `DeleteRecords()`)
 
-3. **Relationship Validation** (`RecordDeletionRelError.Table.al`)
+3. **Deletion Log** (`RecordDeletionLog.Table.al`, page `Record Deletion Log`)
+   - `PerformDeletion` inserts one log entry per table that actually had records (table, number of deleted records, RunTrigger, user, company, time); empty tables are not logged
+   - Inserted in the deletion transaction, so a rolled-back deletion leaves no log entry
+
+4. **Relationship Validation** (`RecordDeletionRelError.Table.al`)
    - Scans Field table metadata for RelationTableNo/RelationFieldNo
    - Stores validation errors for user review before deletion
-- Skips problematic CRM/external table types (TableType::Normal only) as source and as relation target, and relations to system tables (>= 2000000000), which cannot be opened with the Cloud target (`RecordRef.Open` fails with "cannot open record N of datatype RecordRef when using the Cloud target")
+   - Skips problematic CRM/external table types (TableType::Normal only) as source and as relation target, and relations to system tables (>= 2000000000), which cannot be opened with the Cloud target (`RecordRef.Open` fails with "cannot open record N of datatype RecordRef when using the Cloud target")
 
 ### Key Data Flow Pattern
 ```
@@ -39,7 +43,7 @@ User Action → InsertUpdateTables() → Populates Record Deletion table (skips 
 ### Deletion Guards (`CheckDeletionAllowed`)
 - Runs at the start of `DeleteRecords` (before any dialog) and again inside `CreateBackupsForDeletion` and `PerformDeletion`, so the `internal` test hooks cannot bypass it.
 - `CheckNotProductionEnvironment`: errors when `Environment Information`.`IsSaaS()` and `IsProduction()`. On-premises installations cannot be told apart, so they are never blocked.
-- `CheckFlaggedTablesAreDeletable`: errors (listing the tables) if any flagged table is protected. `IsTableProtected(TableID)` covers the tool's own tables (`Record Deletion`, `Record Deletion Rel. Error`, `Table Backup`) and the system range (`>= 2000000000`, see `SystemTableIdStart`). `InsertUpdateTables` and `SetSuggestedTable` skip protected tables as well.
+- `CheckFlaggedTablesAreDeletable`: errors (listing the tables) if any flagged table is protected. `IsTableProtected(TableID)` covers the tool's own tables (`Record Deletion`, `Record Deletion Log`, `Record Deletion Rel. Error`, `Table Backup`) and the system range (`>= 2000000000`, see `SystemTableIdStart`). `InsertUpdateTables` and `SetSuggestedTable` skip protected tables as well.
 
 ## AL-Specific Patterns
 
@@ -158,7 +162,7 @@ User Action → InsertUpdateTables() → Populates Record Deletion table (skips 
   before setting up their own test data. Apply this same guard to any new test that calls one of these two procedures.
 
 - `test/src/table/TestBuffer.Table.al` (id 60000) is the shared dummy table for both test codeunits. It intentionally carries extra fields beyond simple round-trip data so relation-check tests have something to exercise: `"Related No."` (Code, self `TableRelation` to `"No."`) and `"Related System ID"` (Guid, self `TableRelation` to `SystemId`) — used to verify `CheckTableRelationsForTable` detects both Code-based and GUID-based dangling references while ignoring valid/blank ones. `"Related PK No."` (relation to the own primary key without a target field) and `"Related Special PK No."` (relation to `test/src/table/TestPKTarget.Table.al`, id 60001, whose primary key field name contains `( ) &`) cover the primary-key resolution in `GetPrimaryKeyFieldRef`.
-- Current test codeunits: `TableBackupMgtTest` (id 60000) covers all 3 backup types (JSON Export, Snapshot, Full Backup), filtered backups, full round-trip restore across every field type (Integer/Decimal/Boolean/Date/Time/DateTime/Guid/Text), culture-invariant storage (stored JSON uses Format 9 text), locale-sensitive round-trip and legacy-value fallback on restore, `ViewBackupData`/`ExportBackupToFile` error guards (via `asserterror`), and `DeleteSnapshotTable`. `RecordDeletionMgtTest` (id 60001) covers `SetSuggestedTable` (incl. ignoring protected tables), `ClearRecordsToDelete`, `CalcRecordsInTable`, `CheckTableRelationsForTable` (Code, GUID and primary-key relations without an explicit target field, via `Test Buffer`.`"Related PK No."`/`"Related Special PK No."`; relations to system tables are skipped, with a smoke test running the check on one real standard table per system table it relates to, because system tables cannot be opened with the Cloud target), `PerformDeletion` (incl. the protected-table error), `CreateBackupsForDeletion`, and `IsTableProtected`.
+- Current test codeunits: `TableBackupMgtTest` (id 60000) covers all 3 backup types (JSON Export, Snapshot, Full Backup), filtered backups, full round-trip restore across every field type (Integer/Decimal/Boolean/Date/Time/DateTime/Guid/Text), culture-invariant storage (stored JSON uses Format 9 text), locale-sensitive round-trip and legacy-value fallback on restore, `ViewBackupData`/`ExportBackupToFile` error guards (via `asserterror`), and `DeleteSnapshotTable`. `RecordDeletionMgtTest` (id 60001) covers `SetSuggestedTable` (incl. ignoring protected tables), `ClearRecordsToDelete`, `CalcRecordsInTable`, `CheckTableRelationsForTable` (Code, GUID and primary-key relations without an explicit target field, via `Test Buffer`.`"Related PK No."`/`"Related Special PK No."`; relations to system tables are skipped, with a smoke test running the check on one real standard table per system table it relates to, because system tables cannot be opened with the Cloud target), `PerformDeletion` (incl. the protected-table error and the deletion log entries, none for an empty table), `CreateBackupsForDeletion`, and `IsTableProtected`.
 - **Deliberately NOT covered**, with reasons — don't attempt to test these without discussing the tradeoff first:
   - `InsertUpdateTables()`, `SuggestRecordsToDelete()`, all 11 `SetSuggestedXTables()` helpers — scan/flag every table in the environment or a large hardcoded list; too slow/environment-dependent for a unit test.
   - `SuggestUnlicensedPartnerOrCustomRecordsToDelete`, `IsRecordInLicense`, `IsRecordStandardTable` — depend on the environment's license/permission data, not deterministic.
