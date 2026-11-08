@@ -105,6 +105,7 @@ using Microsoft.Warehouse.Worksheet;
 using System.Automation;
 using System.Diagnostics;
 using System.Email;
+using System.Environment;
 using System.Reflection;
 using System.Security.AccessControl;
 using System.Threading;
@@ -163,10 +164,12 @@ codeunit 50000 "Record Deletion Mgt."
     begin
         AllObjWithCaption.SetRange("Object Type", AllObjWithCaption."Object Type"::Table);
         // Do not include system tables
-        AllObjWithCaption.SetFilter("Object ID", '< %1', 2000000001);
+        AllObjWithCaption.SetFilter("Object ID", '< %1', SystemTableIdStart());
         AllObjWithCaption.SetLoadFields("Object ID");
         if AllObjWithCaption.FindSet() then
             repeat
+                if IsTableProtected(AllObjWithCaption."Object ID") then
+                    continue;
                 RecordDeletion.Init();
                 RecordDeletion.Validate("Table ID", AllObjWithCaption."Object ID");
                 RecordDeletion.Validate(Company, CopyStr(CompanyName(), 1, MaxStrLen(RecordDeletion.Company)));
@@ -564,6 +567,9 @@ codeunit 50000 "Record Deletion Mgt."
         ConfirmManagement: Codeunit "Confirm Management";
         CreateBackup: Boolean;
     begin
+        // Fail before any dialog or backup so the user is not asked to confirm something that cannot run.
+        CheckDeletionAllowed();
+
         if not ConfirmDeletion(RunTrigger, ConfirmManagement) then
             exit;
 
@@ -610,6 +616,8 @@ codeunit 50000 "Record Deletion Mgt."
         CreatingBackupTxt: Label 'Creating Backup!\Table: #1#######', Comment = '%1 = Table ID';
         BackupDescriptionTxt: Label 'Backup before deletion (RunTrigger=%1)', Comment = '%1 = RunTrigger value';
     begin
+        CheckDeletionAllowed();
+
         if not ConfirmBackupForFlaggedTablesWithUnsupportedFields(TableBackupMgt) then
             exit(false);
 
@@ -679,6 +687,9 @@ codeunit 50000 "Record Deletion Mgt."
         UpdateDialog: Dialog;
         DeletingRecordsTxt: Label 'Deleting Records!\Table: #1#######', Comment = '%1 = Table ID';
     begin
+        // Repeated here (not only in DeleteRecords) so the internal test hooks cannot bypass the guards.
+        CheckDeletionAllowed();
+
         UpdateDialog.Open(DeletingRecordsTxt);
 
         RecordDeletion.SetLoadFields("Table ID", "Delete Records");
@@ -696,6 +707,57 @@ codeunit 50000 "Record Deletion Mgt."
             until RecordDeletion.Next() = 0;
 
         UpdateDialog.Close();
+    end;
+
+    local procedure CheckDeletionAllowed()
+    begin
+        CheckNotProductionEnvironment();
+        CheckFlaggedTablesAreDeletable();
+    end;
+
+    local procedure CheckNotProductionEnvironment()
+    var
+        EnvironmentInformation: Codeunit "Environment Information";
+        ProductionEnvironmentErr: Label 'Records cannot be deleted in a production environment. Use a sandbox environment instead.';
+    begin
+        // Only SaaS exposes the environment type; on-premises installations cannot be told apart.
+        if not EnvironmentInformation.IsSaaS() then
+            exit;
+        if EnvironmentInformation.IsProduction() then
+            Error(ProductionEnvironmentErr);
+    end;
+
+    local procedure CheckFlaggedTablesAreDeletable()
+    var
+        RecordDeletion: Record "Record Deletion";
+        TableBackupMgt: Codeunit "Table Backup Mgt.";
+        ProtectedTablesText: Text;
+        ProtectedTablesFlaggedErr: Label 'The following table(s) belong to the Record Deletion Tool or to the system and cannot be deleted:\\%1\\Clear the Delete Records flag for them first.', Comment = '%1 = Comma-separated list of protected tables';
+    begin
+        RecordDeletion.SetRange("Delete Records", true);
+        RecordDeletion.SetLoadFields("Table ID");
+        if RecordDeletion.FindSet() then
+            repeat
+                if IsTableProtected(RecordDeletion."Table ID") then
+                    ProtectedTablesText := AddToAffectedTablesText(ProtectedTablesText, RecordDeletion."Table ID", TableBackupMgt.GetTableCaption(RecordDeletion."Table ID"));
+            until RecordDeletion.Next() = 0;
+
+        if ProtectedTablesText <> '' then
+            Error(ProtectedTablesFlaggedErr, ProtectedTablesText);
+    end;
+
+    // internal (not local) so the test app can verify the protection list directly
+    internal procedure IsTableProtected(TableID: Integer): Boolean
+    begin
+        // Deleting the tool's own tables would destroy the selection, the relation errors and every backup.
+        if TableID in [Database::"Record Deletion", Database::"Record Deletion Rel. Error", Database::"Table Backup"] then
+            exit(true);
+        exit(TableID >= SystemTableIdStart());
+    end;
+
+    local procedure SystemTableIdStart(): Integer
+    begin
+        exit(2000000000);
     end;
 
     internal procedure CheckTableRelations()
@@ -894,6 +956,8 @@ codeunit 50000 "Record Deletion Mgt."
     var
         RecordDeletion: Record "Record Deletion";
     begin
+        if IsTableProtected(TableID) then
+            exit;
         if not RecordDeletion.Get(TableID) then
             exit;
         RecordDeletion.Validate("Delete Records", true);
