@@ -575,9 +575,13 @@ codeunit 50000 "Record Deletion Mgt."
 
         CreateBackup := AskForBackup(ConfirmManagement);
 
-        if CreateBackup then
+        if CreateBackup then begin
             if not CreateBackupsForDeletion(RunTrigger) then
                 exit;
+
+            // Keeps the backups even if the deletion fails and rolls back.
+            Commit();
+        end;
 
         PerformDeletion(RunTrigger);
     end;

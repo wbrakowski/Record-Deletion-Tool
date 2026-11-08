@@ -504,6 +504,71 @@ codeunit 60000 "TableBackupMgt Test"
     end;
 
     [Test]
+    procedure CreateBackupWritesValidJSONArrayWithOneObjectPerRecord()
+    var
+        TestBuffer: Record "Test Buffer";
+        TableBackup: Record "Table Backup";
+        InStream: InStream;
+        JSONArray: JsonArray;
+        JSONToken: JsonToken;
+        JSONText: Text;
+        EntryNo: Integer;
+    begin
+        // [GIVEN] Three records, one with characters that must be escaped inside the streamed JSON
+        TestBuffer.DeleteAll(false);
+        CreateTestBufferRecord('S001', 'Plain', 1, 1, true, 20260101D);
+        CreateTestBufferRecord('S002', 'With "quotes", comma and ] bracket', 2, 2, false, 20260102D);
+        CreateTestBufferRecord('S003', 'Third', 3, 3, true, 20260103D);
+
+        // [WHEN] A JSON export backup is created
+        EntryNo := TableBackupMgt.CreateBackup(Database::"Test Buffer", Enum::"Backup Type"::"JSON Export", Enum::"Backup Operation Type"::"Manual Backup", 'Streamed JSON backup', true);
+
+        // [THEN] The stored text is a valid JSON array with exactly one object per record
+        Assert.IsTrue(TableBackup.Get(EntryNo), 'Backup entry should exist.');
+        TableBackup.CalcFields("Backup Data");
+        TableBackup."Backup Data".CreateInStream(InStream, TextEncoding::UTF8);
+        InStream.ReadText(JSONText);
+
+        Assert.IsTrue(JSONArray.ReadFrom(JSONText), 'Backup data should be a valid JSON array. JSON: ' + JSONText);
+        Assert.AreEqual(3, JSONArray.Count(), 'Unexpected number of JSON objects.');
+        JSONArray.Get(1, JSONToken);
+        Assert.IsTrue(JSONToken.IsObject(), 'Array entries should be JSON objects.');
+        Assert.AreEqual('S002', GetJSONObjectText(JSONToken, 'No.'), 'The second array entry should be the second record.');
+        JSONArray.Get(2, JSONToken);
+        Assert.AreEqual('S003', GetJSONObjectText(JSONToken, 'No.'), 'The third array entry should be the third record.');
+        Assert.IsTrue(JSONText.Contains('With \"quotes\", comma and ] bracket'), 'Special characters should be escaped. JSON: ' + JSONText);
+        Assert.IsTrue(TableBackup."Backup Size (KB)" > 0, 'Backup size should be set.');
+
+        TestBuffer.DeleteAll(false);
+        TableBackup.Delete(false);
+    end;
+
+    [Test]
+    procedure CreateBackupOfEmptyTableWritesEmptyJSONArray()
+    var
+        TestBuffer: Record "Test Buffer";
+        TableBackup: Record "Table Backup";
+        InStream: InStream;
+        JSONText: Text;
+        EntryNo: Integer;
+    begin
+        // [GIVEN] An empty source table
+        TestBuffer.DeleteAll(false);
+
+        // [WHEN] A JSON export backup is created
+        EntryNo := TableBackupMgt.CreateBackup(Database::"Test Buffer", Enum::"Backup Type"::"JSON Export", Enum::"Backup Operation Type"::"Manual Backup", 'Empty table backup', true);
+
+        // [THEN] The stored text is an empty JSON array
+        Assert.IsTrue(TableBackup.Get(EntryNo), 'Backup entry should exist.');
+        TableBackup.CalcFields("Backup Data");
+        TableBackup."Backup Data".CreateInStream(InStream, TextEncoding::UTF8);
+        InStream.ReadText(JSONText);
+        Assert.AreEqual('[]', JSONText, 'An empty table should be stored as an empty JSON array.');
+
+        TableBackup.Delete(false);
+    end;
+
+    [Test]
     procedure RestoreFromJSONStillReadsLegacyRegionalValues()
     var
         TestBuffer: Record "Test Buffer";
@@ -539,6 +604,14 @@ codeunit 60000 "TableBackupMgt Test"
 
         TestBuffer.DeleteAll(false);
         TableBackup.Delete(false);
+    end;
+
+    local procedure GetJSONObjectText(JSONToken: JsonToken; PropertyName: Text): Text
+    var
+        PropertyToken: JsonToken;
+    begin
+        JSONToken.AsObject().Get(PropertyName, PropertyToken);
+        exit(PropertyToken.AsValue().AsText());
     end;
 
     local procedure CreateTestBufferRecord(No: Code[20]; Description: Text[100]; IntegerValue: Integer; DecimalValue: Decimal; BooleanValue: Boolean; DateValue: Date)

@@ -33,7 +33,7 @@ Business Central AL extension (v29.0, Cloud target) that enables bulk deletion o
 User Action → InsertUpdateTables() → Populates Record Deletion table (skips protected tables, see below)
            → SuggestRecordsToDelete() → Sets "Delete Records" flags (11 helper procedures by BC area)
            → CheckTableRelations() → Validates foreign keys → Logs errors
-           → DeleteRecords(RunTrigger) → CheckDeletionAllowed() → AskForBackup() → CreateBackupsForDeletion() → PerformDeletion()
+           → DeleteRecords(RunTrigger) → CheckDeletionAllowed() → AskForBackup() → CreateBackupsForDeletion() → Commit() (only if backups were made) → PerformDeletion()
 ```
 
 ### Deletion Guards (`CheckDeletionAllowed`)
@@ -185,6 +185,7 @@ User Action → InsertUpdateTables() → Populates Record Deletion table (skips 
 - Text/Code values are written verbatim; every other supported type is written culture-invariant with `Format(Value, 0, 9)` (decimal with dot and no group separators, date as `yyyy-MM-dd`, DateTime as UTC, option/enum as ordinal) so a backup created under one regional setting restores under another
 - Restore uses type-specific `Evaluate(Var, Text, 9)` first and falls back to plain `Evaluate(Var, Text)` for legacy backups written before invariant serialization (known limitation: a legacy decimal like `"1.234"` meaning 1234 in a dot-grouping locale is valid Format 9 and is read as 1.234)
 - Progress dialogs update every 100 records (mod 100 check)
+- The JSON array is streamed record by record into the BLOB `OutStream` (`WriteRecordsAsJSON`), never built as one `JsonArray`/`Text` in memory; the output equals `JsonArray.WriteTo()`. `Backup Size (KB)` is derived from the characters written (not bytes). Restore still reads the whole text via `ReadText`.
 
 ### Table Suggestion Organization
 11 functional area procedures in RecordDeletionMgt:

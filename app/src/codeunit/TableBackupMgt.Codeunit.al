@@ -151,88 +151,78 @@ codeunit 50001 "Table Backup Mgt."
     local procedure ExportTableToJSON(var TableBackup: Record "Table Backup"; var ProgressDialog: Dialog)
     var
         RecordRef: RecordRef;
-        OutStream: OutStream;
-        JSONText: Text;
     begin
         if GuiAllowed() then
             ProgressDialog.Update(3, 'Reading table data...');
 
         RecordRef.Open(TableBackup."Table ID");
-        JSONText := ConvertTableToJSON(RecordRef, ProgressDialog);
+        WriteTableToBackupBlob(TableBackup, RecordRef, ProgressDialog);
         RecordRef.Close();
-
-        if GuiAllowed() then
-            ProgressDialog.Update(3, 'Saving backup data...');
-
-        TableBackup."Backup Data".CreateOutStream(OutStream, TextEncoding::UTF8);
-        OutStream.WriteText(JSONText);
-        TableBackup.Validate("Backup Size (KB)", Round(StrLen(JSONText) / 1024, 0.01));
-        TableBackup.Validate("File Name", CopyStr(GetBackupFileName(TableBackup), 1, MaxStrLen(TableBackup."File Name")));
-
-        if GuiAllowed() then
-            ProgressDialog.Update(3, 'Backup completed');
     end;
 
     local procedure ExportTableToJSONWithFilter(var TableBackup: Record "Table Backup"; FilterView: Text; var ProgressDialog: Dialog)
     var
         RecordRef: RecordRef;
-        OutStream: OutStream;
-        JSONText: Text;
     begin
         if GuiAllowed() then
             ProgressDialog.Update(3, 'Reading filtered table data...');
 
         RecordRef.Open(TableBackup."Table ID");
         RecordRef.SetView(FilterView);
-        JSONText := ConvertTableToJSON(RecordRef, ProgressDialog);
+        WriteTableToBackupBlob(TableBackup, RecordRef, ProgressDialog);
         RecordRef.Close();
+    end;
 
-        if GuiAllowed() then
-            ProgressDialog.Update(3, 'Saving backup data...');
-
+    local procedure WriteTableToBackupBlob(var TableBackup: Record "Table Backup"; var RecordRef: RecordRef; var ProgressDialog: Dialog)
+    var
+        OutStream: OutStream;
+        WrittenChars: BigInteger;
+    begin
         TableBackup."Backup Data".CreateOutStream(OutStream, TextEncoding::UTF8);
-        OutStream.WriteText(JSONText);
-        TableBackup.Validate("Backup Size (KB)", Round(StrLen(JSONText) / 1024, 0.01));
+        WrittenChars := WriteRecordsAsJSON(RecordRef, OutStream, ProgressDialog);
+
+        TableBackup.Validate("Backup Size (KB)", Round(WrittenChars / 1024, 0.01));
         TableBackup.Validate("File Name", CopyStr(GetBackupFileName(TableBackup), 1, MaxStrLen(TableBackup."File Name")));
 
         if GuiAllowed() then
             ProgressDialog.Update(3, 'Backup completed');
     end;
 
-    local procedure ConvertTableToJSON(var RecordRef: RecordRef; var ProgressDialog: Dialog): Text
-    var
-        JSONArray: JsonArray;
-        JSONText: Text;
-    begin
-        JSONArray := BuildJSONArrayFromRecords(RecordRef, ProgressDialog);
-
-        if GuiAllowed() then
-            ProgressDialog.Update(3, 'Finalizing JSON...');
-
-        JSONArray.WriteTo(JSONText);
-        exit(JSONText);
-    end;
-
-    local procedure BuildJSONArrayFromRecords(var RecordRef: RecordRef; var ProgressDialog: Dialog): JsonArray
+    // Writes the JSON array record by record, so neither the whole array nor its text lives in memory.
+    // The output is identical to JsonArray.WriteTo(). Returns the number of characters written.
+    local procedure WriteRecordsAsJSON(var RecordRef: RecordRef; var OutStream: OutStream; var ProgressDialog: Dialog): BigInteger
     var
         TempExportField: Record Field temporary;
-        JSONArray: JsonArray;
+        JSONObject: JsonObject;
         CurrentRecord: Integer;
         RecordCount: Integer;
+        WrittenChars: BigInteger;
+        RecordJSONText: Text;
     begin
         CollectTableFields(RecordRef.Number(), TempExportField);
 
         RecordCount := RecordRef.Count();
-        CurrentRecord := 0;
+
+        OutStream.WriteText('[');
+        WrittenChars := 1;
 
         if RecordRef.FindSet() then
             repeat
                 CurrentRecord += 1;
                 UpdateProgressIfNeeded(ProgressDialog, CurrentRecord, RecordCount);
-                JSONArray.Add(ConvertRecordToJSON(RecordRef, TempExportField));
+
+                JSONObject := ConvertRecordToJSON(RecordRef, TempExportField);
+                JSONObject.WriteTo(RecordJSONText);
+                if CurrentRecord > 1 then begin
+                    OutStream.WriteText(',');
+                    WrittenChars += 1;
+                end;
+                OutStream.WriteText(RecordJSONText);
+                WrittenChars += StrLen(RecordJSONText);
             until RecordRef.Next() = 0;
 
-        exit(JSONArray);
+        OutStream.WriteText(']');
+        exit(WrittenChars + 1);
     end;
 
     // Loads the field metadata once per table instead of re-querying the Field system table for every
