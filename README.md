@@ -19,15 +19,17 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 - Identifies records that would cause orphaned data
 - Displays validation errors for review before proceeding
 - Prevents accidental data integrity issues
+- Relations to system tables and to tables that cannot be opened (e.g. CRM, external) are skipped
 
 ### 🛡️ Built-in Safeguards
 - **Production lock**: deletion is refused in a Business Central online **production** environment (sandboxes and on-premises installations are not blocked)
 - **Protected tables**: the tool's own tables (Record Deletion, Record Deletion Log, Record Deletion Rel. Error, Table Backup) and system tables are never offered, suggested or deleted. If one of them is flagged anyway, the deletion stops before anything is touched
 
 ### 💾 Comprehensive Backup System
-- **Automatic backup prompts** before deletion operations
+- **Automatic backup prompts** before deletion operations; the backups are saved before the deletion starts, so they are kept even if the deletion fails
 - **Three backup types**: JSON Export, Snapshot, Full Backup (Snapshot and Full Backup currently use the same JSON-based storage as JSON Export)
-- **JSON-based storage** for easy portability and inspection
+- **JSON-based storage** for easy portability and inspection; large tables are written record by record, not held in memory as a whole
+- **Filtered backups**: back up only some records, with the filter set in the standard filter dialog
 - **One-click restore** to recover deleted data
 - **Export/Import** backup files for archival or transfer
 - **Backup metadata** tracking (user, date/time, operation type)
@@ -81,16 +83,17 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
    - Fix issues or proceed with caution
 
 5. **Create Backup (Optional but Recommended)**
-   - Navigate to "Table Backup List" page
-   - Click "Create Table Backup" to manually backup specific tables
-   - To back up only some records, enable "Use Filter" and choose the assist-edit button of "Filter View" to set the filter on the table's fields
+   - Click "Manage Backups" to open the "Table Backup List" page
+   - Click "Create Backup" to manually backup specific tables
+   - To back up only some records, enable "Use Filter" and choose the assist-edit button of "Filter View" to set the filter on the table's fields; "Use Filter" without a filter is rejected
    - Or let the deletion process prompt you automatically
 
 6. **Delete Records**
-   - Click "Delete Records (without Trigger)" for faster deletion
-   - Or "Delete Records (with Trigger)" to execute table triggers
+   - Click "Delete Records (no trigger!)" for faster deletion
+   - Or "Delete Records (with trigger!)" to execute table triggers
    - **You will be prompted to create a backup** - highly recommended!
    - Confirm the deletion operation
+   - Click "Deletion Log" afterwards to see which tables had how many records deleted
 
 ### Restoring Deleted Data
 
@@ -103,9 +106,9 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 ### Managing Backups
 
 - **View Backup Data**: Inspect the JSON content of any backup
-- **Export Backup**: Download backup as a JSON file for archival
-- **Import Backup**: Upload previously exported backup files
-- **Delete Old Backups**: Remove backups you no longer need
+- **Export Backup**: Download backup as a JSON file for archival ("Export to File")
+- **Import Backup**: Upload previously exported backup files ("Import from File")
+- **Delete Old Backups**: Remove backups older than 30 days
 
 ## Screenshots
 
@@ -128,8 +131,8 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 
 ### Components
 
-- **Tables**: Record Deletion, Record Deletion Rel. Error, Table Backup
-- **Pages**: Record Deletion, Record Deletion Rel. Error, Table Backup List, Table Backup Card, Create Table Backup
+- **Tables**: Record Deletion, Record Deletion Log, Record Deletion Rel. Error, Table Backup
+- **Pages**: Record Deletion, Record Deletion Log, Record Deletion Rel. Error, Table Backup List, Table Backup Card, Create Table Backup
 - **Codeunits**: Record Deletion Mgt., Table Backup Mgt.
 - **Enums**: Backup Type, Backup Operation Type
 - **Permission Set**: Record Deletion (assignable)
@@ -139,7 +142,7 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 The repository is split into two sibling AL projects:
 
 - **`app/`**: the main extension described above (id range 50000-50099).
-- **`test/`**: a separate AL test app (id range 60000-60049) with an automated test suite built on the AL Test Toolkit (`Library Assert`), covering backup creation/restore (all backup types and field types) and the deletion/relation-check logic.
+- **`test/`**: a separate AL test app (id range 60000-60049) with an automated test suite built on the AL Test Toolkit (`Library Assert`), covering backup creation/restore (all backup types and field types), the deletion log and the deletion/relation-check logic.
 
 To work on this repo:
 
