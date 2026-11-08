@@ -1,6 +1,7 @@
 namespace RecordDeletionTool.Test;
 
 using RecordDeletionTool;
+using System.Reflection;
 using System.TestLibraries.Utilities;
 
 codeunit 60001 "RecordDeletionMgt Test"
@@ -193,6 +194,126 @@ codeunit 60001 "RecordDeletionMgt Test"
     end;
 
     [Test]
+    procedure CheckTableRelationsForTableDetectsMissingPrimaryKeyRelation()
+    var
+        TestBuffer: Record "Test Buffer";
+        RecordDeletionRelError: Record "Record Deletion Rel. Error";
+    begin
+        // [GIVEN] Records with a valid, a dangling and a blank relation to the primary key (no explicit target field)
+        TestBuffer.DeleteAll(false);
+        RecordDeletionRelError.SetRange("Table ID", Database::"Test Buffer");
+        RecordDeletionRelError.DeleteAll(false);
+
+        InsertTestBufferRecordWithPrimaryKeyRelation('K001', '');
+        InsertTestBufferRecordWithPrimaryKeyRelation('K002', 'K001');
+        InsertTestBufferRecordWithPrimaryKeyRelation('K003', 'MISSING');
+
+        // [WHEN] Table relations are checked for the test table
+        RecordDeletionMgt.CheckTableRelationsForTable(Database::"Test Buffer");
+
+        // [THEN] Only the dangling reference is reported as a relation error
+        RecordDeletionRelError.SetRange("Table ID", Database::"Test Buffer");
+        Assert.RecordCount(RecordDeletionRelError, 1);
+        Assert.IsTrue(RecordDeletionRelError.FindFirst(), 'A relation error should have been recorded.');
+        Assert.AreEqual(TestBuffer.FieldNo("Related PK No."), RecordDeletionRelError."Field No.", 'Unexpected field reported in the relation error.');
+
+        RecordDeletionRelError.DeleteAll(false);
+        TestBuffer.DeleteAll(false);
+    end;
+
+    [Test]
+    procedure CheckTableRelationsForTableHandlesPrimaryKeyNameWithSpecialCharacters()
+    var
+        TestBuffer: Record "Test Buffer";
+        TestPKTarget: Record "Test PK Target";
+        RecordDeletionRelError: Record "Record Deletion Rel. Error";
+    begin
+        // [GIVEN] A target table whose primary key field name contains ( ) &, with one record
+        TestBuffer.DeleteAll(false);
+        TestPKTarget.DeleteAll(false);
+        RecordDeletionRelError.SetRange("Table ID", Database::"Test Buffer");
+        RecordDeletionRelError.DeleteAll(false);
+
+        TestPKTarget.Init();
+        TestPKTarget."Code & No. (Key)" := 'P001';
+        TestPKTarget.Insert(false);
+
+        // [GIVEN] Test buffer records with a valid, a dangling and a blank relation to that table
+        InsertTestBufferRecordWithSpecialPKRelation('S001', '');
+        InsertTestBufferRecordWithSpecialPKRelation('S002', 'P001');
+        InsertTestBufferRecordWithSpecialPKRelation('S003', 'MISSING');
+
+        // [WHEN] Table relations are checked for the test table
+        RecordDeletionMgt.CheckTableRelationsForTable(Database::"Test Buffer");
+
+        // [THEN] Only the dangling reference is reported as a relation error
+        RecordDeletionRelError.SetRange("Table ID", Database::"Test Buffer");
+        Assert.RecordCount(RecordDeletionRelError, 1);
+        Assert.IsTrue(RecordDeletionRelError.FindFirst(), 'A relation error should have been recorded.');
+        Assert.AreEqual(TestBuffer.FieldNo("Related Special PK No."), RecordDeletionRelError."Field No.", 'Unexpected field reported in the relation error.');
+
+        RecordDeletionRelError.DeleteAll(false);
+        TestBuffer.DeleteAll(false);
+        TestPKTarget.DeleteAll(false);
+    end;
+
+    [Test]
+    procedure CheckTableRelationsForTableSkipsRelationsToSystemTables()
+    var
+        TestBuffer: Record "Test Buffer";
+        RecordDeletionRelError: Record "Record Deletion Rel. Error";
+    begin
+        // [GIVEN] A record whose relation to a system table (Table Metadata) points to a non-existing ID
+        TestBuffer.DeleteAll(false);
+        RecordDeletionRelError.SetRange("Table ID", Database::"Test Buffer");
+        RecordDeletionRelError.DeleteAll(false);
+
+        TestBuffer.Init();
+        TestBuffer."No." := 'Y001';
+        TestBuffer."Related Metadata ID" := 999999999;
+        TestBuffer.Insert(false);
+
+        // [WHEN] Table relations are checked for the test table
+        RecordDeletionMgt.CheckTableRelationsForTable(Database::"Test Buffer");
+
+        // [THEN] The relation to the system table is not checked and nothing is reported
+        RecordDeletionRelError.SetRange("Table ID", Database::"Test Buffer");
+        Assert.RecordCount(RecordDeletionRelError, 0);
+
+        TestBuffer.DeleteAll(false);
+    end;
+
+    [Test]
+    procedure CheckTableRelationsForTableRunsForStandardTablesRelatedToEachSystemTable()
+    var
+        Field: Record Field;
+        TableMetadata: Record "Table Metadata";
+        SourceTableIds: Dictionary of [Integer, Integer];
+        SourceTableId: Integer;
+    begin
+        // [GIVEN] For every system table that standard tables relate to, one normal standard table with such a relation
+        Field.SetRange(TableNo, 1, 49999);
+        Field.SetFilter(RelationTableNo, '>=%1', 2000000000);
+        Field.SetRange(Class, Field.Class::Normal);
+        Field.SetRange(ObsoleteState, Field.ObsoleteState::No);
+        Field.SetLoadFields(TableNo, RelationTableNo);
+        Assert.IsTrue(Field.FindSet(), 'Expected standard tables with relations to system tables.');
+        repeat
+            if SourceTableIds.ContainsKey(Field.RelationTableNo) then
+                continue;
+            TableMetadata.SetRange(ID, Field.TableNo);
+            TableMetadata.SetRange(TableType, TableMetadata.TableType::Normal);
+            if TableMetadata.IsEmpty() then
+                continue;
+            SourceTableIds.Add(Field.RelationTableNo, Field.TableNo);
+        until Field.Next() = 0;
+
+        // [WHEN/THEN] The relation check runs without a runtime error, e.g. "cannot open record N of type RecordRef with the Cloud target"
+        foreach SourceTableId in SourceTableIds.Values() do
+            RecordDeletionMgt.CheckTableRelationsForTable(SourceTableId);
+    end;
+
+    [Test]
     procedure CheckTableRelationsForTableDetectsMissingGuidRelation()
     var
         TestBufferA: Record "Test Buffer";
@@ -353,6 +474,26 @@ codeunit 60001 "RecordDeletionMgt Test"
         TestBuffer.Init();
         TestBuffer."No." := BufferNo;
         TestBuffer."Related No." := RelatedNo;
+        TestBuffer.Insert(false);
+    end;
+
+    local procedure InsertTestBufferRecordWithPrimaryKeyRelation(BufferNo: Code[20]; RelatedPKNo: Code[20])
+    var
+        TestBuffer: Record "Test Buffer";
+    begin
+        TestBuffer.Init();
+        TestBuffer."No." := BufferNo;
+        TestBuffer."Related PK No." := RelatedPKNo;
+        TestBuffer.Insert(false);
+    end;
+
+    local procedure InsertTestBufferRecordWithSpecialPKRelation(BufferNo: Code[20]; RelatedSpecialPKNo: Code[20])
+    var
+        TestBuffer: Record "Test Buffer";
+    begin
+        TestBuffer.Init();
+        TestBuffer."No." := BufferNo;
+        TestBuffer."Related Special PK No." := RelatedSpecialPKNo;
         TestBuffer.Insert(false);
     end;
 }
