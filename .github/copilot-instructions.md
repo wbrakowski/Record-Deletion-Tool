@@ -63,7 +63,8 @@ User Action → InsertUpdateTables() → Populates Record Deletion table (skips 
 - **Variable ordering**: Record, Report, Codeunit, XmlPort, Page, Query, then RecordRef, FieldRef, Dialog, then primitives
 - **Built-in methods**: Always use parentheses: `CompanyName()`, `IsEmpty()`, `Value()`, `Type()`, `Length()`, `Number()`, `Name()`
 - **Confirmations**: Use `ConfirmManagement.GetResponseOrDefault()` instead of direct `Confirm()`
-- **ToolTips**: Define on table fields only, not on page fields (LC0064)
+- **ToolTips**: Define on table fields only, not on page fields (LC0064); page actions and expression fields (e.g. `NoOfRecords`) carry their own ToolTip
+- **Page actions**: Promote via `area(Promoted)` with `actionref` groups, never with the obsolete `Promoted`/`PromotedCategory`/`PromotedActionCategories` properties; use `Caption`, not `CaptionML`
 
 ### Critical LC Rules to Avoid
 **FlowFields & Properties**
@@ -136,8 +137,8 @@ User Action → InsertUpdateTables() → Populates Record Deletion table (skips 
 
 ### Manual Testing Pattern
 - Manual testing via "Record Deletion" page (Tell Me: search "Record Deletion")
-- Workflow: Insert/Update Tables → Suggest Records → Check Relations → Delete (with backup prompt)
-- Restore from "Table Backup List" page
+- Workflow: Insert/Update Tables → Suggest Records → Check Relations → Delete (with backup prompt; the "Deletion Log" action shows what was deleted)
+- Restore from "Table Backup List" page (also reachable via the "Manage Backups" action)
 
 ### Automated Testing (AL Test Toolkit)
 - Tests live in a **separate AL app** under `test/` (own `app.json`, `id`, `idRanges 60000-60049`), depending on the main app plus Microsoft's `Library Assert` and `Any` test libraries.
@@ -206,11 +207,13 @@ User Action → InsertUpdateTables() → Populates Record Deletion table (skips 
 
 ### Error Handling Workarounds
 - Field IDs 124 filtered out for tables 5330/7200 to avoid "Table connection for table type CRM must be registered" error
-- TableType::Normal filter prevents errors on external/virtual tables
+- TableType::Normal filter on the source table and on the relation target prevents errors on external/virtual tables; relations to system tables (>= 2000000000) are skipped because they cannot be opened with the Cloud target
 
 ## Files of Interest
-- `app/src/codeunit/RecordDeletionMgt.Codeunit.al`: 740+ lines, main business logic, heavily refactored for maintainability
+- `app/src/codeunit/RecordDeletionMgt.Codeunit.al`: main business logic (suggestions, relation check, deletion guards, backup-before-delete, deletion log), heavily refactored for maintainability
 - `app/src/codeunit/TableBackupMgt.Codeunit.al`: Complete JSON backup/restore implementation with type handling
+- `app/src/table/RecordDeletionLog.Table.al` / `app/src/page/RecordDeletionLog.Page.al`: log of deleted records per table
+- `app/src/page/CreateTableBackup.Page.al`: backup dialog incl. the `FilterPageBuilder` filter selection
 - `app/src/permissionset/RecordDeletion.PermissionSet.al`: Security model reference for all extension objects
 - `app/app.json`: Platform 29.0, NoImplicitWith feature, Cloud target, `internalsVisibleTo` the test app
 - `test/src/codeunit/TableBackupMgtTest.Codeunit.al` (id 60000): backup/restore tests (all backup types, all field types, filtered backups)
