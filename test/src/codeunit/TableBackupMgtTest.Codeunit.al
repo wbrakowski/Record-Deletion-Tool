@@ -108,6 +108,31 @@ codeunit 60000 "TableBackupMgt Test"
     end;
 
     [Test]
+    procedure NormalizeFilterViewKeepsViewWithFilter()
+    var
+        TestBuffer: Record "Test Buffer";
+        FilterView: Text;
+    begin
+        // [GIVEN] A view that filters on Integer Value
+        TestBuffer.SetFilter("Integer Value", '>%1', 1);
+        FilterView := TestBuffer.GetView(false);
+
+        // [WHEN/THEN] The view is returned unchanged
+        Assert.AreEqual(FilterView, TableBackupMgt.NormalizeFilterView(Database::"Test Buffer", FilterView), 'A view with a filter should be returned unchanged.');
+    end;
+
+    [Test]
+    procedure NormalizeFilterViewReturnsEmptyForViewWithoutFilter()
+    var
+        TestBuffer: Record "Test Buffer";
+    begin
+        // [GIVEN] A view that only carries the sort order, as returned by the filter page for an untouched filter
+        // [WHEN/THEN] No filter remains, so the result is empty
+        Assert.AreEqual('', TableBackupMgt.NormalizeFilterView(Database::"Test Buffer", TestBuffer.GetView(false)), 'A sort-only view should be normalized to an empty text.');
+        Assert.AreEqual('', TableBackupMgt.NormalizeFilterView(Database::"Test Buffer", ''), 'An empty view should stay empty.');
+    end;
+
+    [Test]
     procedure CreateBackupWithSnapshotTypeAssignsSnapshotTableId()
     var
         TestBuffer: Record "Test Buffer";

@@ -28,6 +28,7 @@ page 50004 "Create Table Backup"
                     trigger OnValidate()
                     begin
                         UpdateTableName();
+                        Clear(FilterView);
                     end;
 
                     trigger OnLookup(var Text: Text): Boolean
@@ -40,6 +41,7 @@ page 50004 "Create Table Backup"
 
                         TableID := AllObjWithCaption."Object ID";
                         UpdateTableName();
+                        Clear(FilterView);
                         exit(true);
                     end;
                 }
@@ -72,22 +74,29 @@ page 50004 "Create Table Backup"
                 }
                 field(FilterViewField; FilterView)
                 {
+                    AssistEdit = true;
                     Caption = 'Filter View';
                     Editable = UseFilter;
                     MultiLine = true;
-                    ToolTip = 'Specifies the filter to apply (only if Use Filter is enabled).';
+                    ToolTip = 'Specifies the filter to apply (only if Use Filter is enabled). Choose the assist-edit button to set the filter on the fields of the selected table.';
+
+                    trigger OnValidate()
+                    var
+                        TableBackupMgt: Codeunit "Table Backup Mgt.";
+                        SelectTableFirstErr: Label 'Please select a table first.';
+                    begin
+                        if FilterView = '' then
+                            exit;
+
+                        if TableID = 0 then
+                            Error(SelectTableFirstErr);
+
+                        FilterView := TableBackupMgt.NormalizeFilterView(TableID, FilterView);
+                    end;
 
                     trigger OnAssistEdit()
-                    var
-                        SelectTableFirstMsg: Label 'Please select a table first.';
-                        EnterFilterManuallyMsg: Label 'Please enter the filter manually in the format: Field1=Value1,Field2=Value2';
                     begin
-                        if TableID = 0 then begin
-                            Message(SelectTableFirstMsg);
-                            exit;
-                        end;
-
-                        Message(EnterFilterManuallyMsg);
+                        SelectFilter();
                     end;
                 }
             }
@@ -117,6 +126,7 @@ page 50004 "Create Table Backup"
         EntryNo: Integer;
         SuccessMsg: Label 'Backup created successfully. Entry No.: %1', Comment = '%1 = Entry No.';
         TableSelectionErr: Label 'Please select a table.';
+        FilterMissingErr: Label 'Use Filter is enabled but no filter is set. Set a filter or disable Use Filter.';
     begin
         // Only create backup if user clicked OK
         if CloseAction <> Action::OK then
@@ -126,8 +136,11 @@ page 50004 "Create Table Backup"
         if TableID = 0 then
             Error(TableSelectionErr);
 
+        if UseFilter and (FilterView = '') then
+            Error(FilterMissingErr);
+
         // Create the backup
-        if UseFilter and (FilterView <> '') then
+        if UseFilter then
             EntryNo := TableBackupMgt.CreateBackupWithFilter(TableID, BackupType, BackupOperationType::"Manual Backup", BackupDescription, FilterView, true)
         else
             EntryNo := TableBackupMgt.CreateBackup(TableID, BackupType, BackupOperationType::"Manual Backup", BackupDescription, true);
@@ -138,6 +151,27 @@ page 50004 "Create Table Backup"
 
         Message(SuccessMsg, EntryNo);
         exit(true);
+    end;
+
+    local procedure SelectFilter()
+    var
+        TableBackupMgt: Codeunit "Table Backup Mgt.";
+        FilterPageBuilder: FilterPageBuilder;
+        SelectTableFirstMsg: Label 'Please select a table first.';
+    begin
+        if (TableID = 0) or (TableName = '') then begin
+            Message(SelectTableFirstMsg);
+            exit;
+        end;
+
+        FilterPageBuilder.AddTable(TableName, TableID);
+        if FilterView <> '' then
+            FilterPageBuilder.SetView(TableName, FilterView);
+
+        if not FilterPageBuilder.RunModal() then
+            exit;
+
+        FilterView := TableBackupMgt.NormalizeFilterView(TableID, FilterPageBuilder.GetView(TableName));
     end;
 
     local procedure UpdateTableName()
