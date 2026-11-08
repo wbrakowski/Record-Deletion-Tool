@@ -910,7 +910,8 @@ codeunit 50000 "Record Deletion Mgt."
         if Field.IsEmpty() then
             exit(0);
         RecordRef.Open(TableNoToCheck);
-        RecordRef.ReadIsolation(IsolationLevel::UpdLock);
+        // Display-only count called once per visible list row: an approximate value is fine, a lock is not.
+        RecordRef.ReadIsolation(IsolationLevel::ReadUncommitted);
         NoOfRecords := RecordRef.Count();
         RecordRef.Close();
         exit(NoOfRecords);

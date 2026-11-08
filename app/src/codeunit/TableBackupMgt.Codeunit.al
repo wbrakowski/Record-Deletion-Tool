@@ -289,11 +289,13 @@ codeunit 50001 "Table Backup Mgt."
     var
         Field: Record Field;
     begin
-        // Options/enums are stored as their culture-invariant ordinal (standard Format 9) so restore does
-        // not depend on the caption language that was active when the backup was created.
-        if FieldType = Field.Type::Option then
-            exit(Format(FieldRef.Value(), 0, 9));
-        exit(Format(FieldRef.Value()));
+        // Every non-text value is stored in the culture-invariant XML format (standard Format 9): decimals
+        // with a dot and no group separators, dates as yyyy-MM-dd, options as their ordinal, etc. Otherwise
+        // a backup written under one regional setting ("01.02.2026", "1.234,56") cannot be restored under
+        // another. Text and Code are written verbatim.
+        if FieldType in [Field.Type::Text, Field.Type::Code] then
+            exit(Format(FieldRef.Value()));
+        exit(Format(FieldRef.Value(), 0, 9));
     end;
 #pragma warning restore LC0010, LC0088
 
@@ -561,60 +563,79 @@ codeunit 50001 "Table Backup Mgt."
     end;
 #pragma warning restore LC0010, LC0088
 
+    // The Assign*Value procedures first parse the culture-invariant representation written by
+    // GetFieldValueAsText (Format 9). The plain Evaluate is a fallback for backups created before
+    // invariant serialization existed, which still hold region-specific text ("1.234,56", "Yes").
+    // Known limitation: a legacy decimal whose only separator is a dot used as group separator
+    // ("1.234" meaning 1234 in de/es/it/nl) is valid Format 9 too and is read as 1.234.
     local procedure AssignIntegerValue(var FieldRef: FieldRef; FieldValue: Text)
     var
         IntegerValue: Integer;
     begin
-        if Evaluate(IntegerValue, FieldValue) then
-            FieldRef.Value(IntegerValue);
+        if not Evaluate(IntegerValue, FieldValue, 9) then
+            if not Evaluate(IntegerValue, FieldValue) then
+                exit;
+        FieldRef.Value(IntegerValue);
     end;
 
     local procedure AssignDecimalValue(var FieldRef: FieldRef; FieldValue: Text)
     var
         DecimalValue: Decimal;
     begin
-        if Evaluate(DecimalValue, FieldValue) then
-            FieldRef.Value(DecimalValue);
+        if not Evaluate(DecimalValue, FieldValue, 9) then
+            if not Evaluate(DecimalValue, FieldValue) then
+                exit;
+        FieldRef.Value(DecimalValue);
     end;
 
     local procedure AssignBooleanValue(var FieldRef: FieldRef; FieldValue: Text)
     var
         BooleanValue: Boolean;
     begin
-        if Evaluate(BooleanValue, FieldValue) then
-            FieldRef.Value(BooleanValue);
+        if not Evaluate(BooleanValue, FieldValue, 9) then
+            if not Evaluate(BooleanValue, FieldValue) then
+                exit;
+        FieldRef.Value(BooleanValue);
     end;
 
     local procedure AssignDateValue(var FieldRef: FieldRef; FieldValue: Text)
     var
         DateValue: Date;
     begin
-        if Evaluate(DateValue, FieldValue) then
-            FieldRef.Value(DateValue);
+        if not Evaluate(DateValue, FieldValue, 9) then
+            if not Evaluate(DateValue, FieldValue) then
+                exit;
+        FieldRef.Value(DateValue);
     end;
 
     local procedure AssignTimeValue(var FieldRef: FieldRef; FieldValue: Text)
     var
         TimeValue: Time;
     begin
-        if Evaluate(TimeValue, FieldValue) then
-            FieldRef.Value(TimeValue);
+        if not Evaluate(TimeValue, FieldValue, 9) then
+            if not Evaluate(TimeValue, FieldValue) then
+                exit;
+        FieldRef.Value(TimeValue);
     end;
 
     local procedure AssignDateTimeValue(var FieldRef: FieldRef; FieldValue: Text)
     var
         DateTimeValue: DateTime;
     begin
-        if Evaluate(DateTimeValue, FieldValue) then
-            FieldRef.Value(DateTimeValue);
+        if not Evaluate(DateTimeValue, FieldValue, 9) then
+            if not Evaluate(DateTimeValue, FieldValue) then
+                exit;
+        FieldRef.Value(DateTimeValue);
     end;
 
     local procedure AssignGuidValue(var FieldRef: FieldRef; FieldValue: Text)
     var
         GuidValue: Guid;
     begin
-        if Evaluate(GuidValue, FieldValue) then
-            FieldRef.Value(GuidValue);
+        if not Evaluate(GuidValue, FieldValue, 9) then
+            if not Evaluate(GuidValue, FieldValue) then
+                exit;
+        FieldRef.Value(GuidValue);
     end;
 
     local procedure AssignOptionValue(var FieldRef: FieldRef; FieldValue: Text)
