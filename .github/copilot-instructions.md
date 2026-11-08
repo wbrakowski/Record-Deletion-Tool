@@ -164,6 +164,7 @@ User Action → InsertUpdateTables() → Populates Record Deletion table (skips 
   - `SuggestUnlicensedPartnerOrCustomRecordsToDelete`, `IsRecordInLicense`, `IsRecordStandardTable` — depend on the environment's license/permission data, not deterministic.
   - `DeleteRecords()`, `RestoreBackup()` (the public, confirm-gated entry points) — thin orchestration already covered by testing their internal building blocks directly.
   - `ViewRecords` — just calls `Hyperlink()`, nothing to assert.
+  - The `FilterPageBuilder.RunModal()` dialog in the `Create Table Backup` page (`SelectFilter`) — interactive, not automatable. Only the non-interactive `TableBackupMgt.NormalizeFilterView` (sort-only view → empty text) is tested; its invalid-view error path (raised by `RecordRef.SetView`) is not, because the exact runtime error text was not verified.
   - `CheckNotProductionEnvironment` — `IsProduction()` is always `false` where tests run (sandbox), the blocking branch cannot be reached.
   - The "dual primary key" fallback branch in `GetPrimaryKeyFieldRef` and the `SystemCreatedBy`/`SystemModifiedBy` skip branch in `CheckFieldRelation` — not reliably forceable/verifiable without live test execution (see session notes if picking this up).
   - The real `DownloadFromStream` success path in `ExportBackupToFile` — only the `Error(NoBackupDataErr)` guard clause is tested; behavior of an actual client download when `GuiAllowed()` is `false` wasn't empirically verified.

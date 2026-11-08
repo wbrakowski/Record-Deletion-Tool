@@ -80,6 +80,24 @@ codeunit 50001 "Table Backup Mgt."
         exit(TableBackup."Entry No.");
     end;
 
+    /// <summary>
+    /// Validates the view against the table and returns it, or an empty text if the view sets no filter (e.g. only a sort order).
+    /// </summary>
+    internal procedure NormalizeFilterView(TableID: Integer; FilterView: Text): Text
+    var
+        RecordRef: RecordRef;
+    begin
+        if FilterView = '' then
+            exit('');
+
+        RecordRef.Open(TableID);
+        RecordRef.SetView(FilterView);
+        if not RecordRef.HasFilter() then
+            exit('');
+
+        exit(FilterView);
+    end;
+
     local procedure GetBackupTypeToUse(BackupType: Enum "Backup Type"): Enum "Backup Type"
     begin
         // Ensure a valid backup type is used (fallback to JSON Export if 0)

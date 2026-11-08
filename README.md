@@ -82,6 +82,7 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 5. **Create Backup (Optional but Recommended)**
    - Navigate to "Table Backup List" page
    - Click "Create Table Backup" to manually backup specific tables
+   - To back up only some records, enable "Use Filter" and choose the assist-edit button of "Filter View" to set the filter on the table's fields
    - Or let the deletion process prompt you automatically
 
 6. **Delete Records**
