@@ -108,10 +108,6 @@ page 50003 "Table Backup Card"
             {
                 Caption = 'Restore Backup';
                 Image = Import;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
                 ToolTip = 'Restore records from this backup.';
 
                 trigger OnAction()
@@ -124,10 +120,6 @@ page 50003 "Table Backup Card"
             {
                 Caption = 'Export to File';
                 Image = ExportFile;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
                 ToolTip = 'Export the backup data to a JSON file.';
 
                 trigger OnAction()
@@ -139,16 +131,24 @@ page 50003 "Table Backup Card"
             {
                 Caption = 'View Backup Data';
                 Image = View;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                PromotedOnly = true;
-                ToolTip = 'Specifies that the backup data (first 1000 characters) will be displayed.';
+                ToolTip = 'Displays the first 1000 characters of the backup data.';
 
                 trigger OnAction()
                 begin
                     Rec.ViewBackupData();
                 end;
+            }
+        }
+        area(Promoted)
+        {
+            actionref(RestoreBackup_Promoted; RestoreBackup)
+            {
+            }
+            actionref(ExportToFile_Promoted; ExportToFile)
+            {
+            }
+            actionref(ViewData_Promoted; ViewData)
+            {
             }
         }
     }

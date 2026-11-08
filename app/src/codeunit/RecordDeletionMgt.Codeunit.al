@@ -141,6 +141,7 @@ codeunit 50000 "Record Deletion Mgt."
                   tabledata "Purchase Header" = imd,
                   tabledata "Purchase Line" = imd,
                   tabledata "Record Deletion" = rimd,
+                  tabledata "Record Deletion Log" = rim,
                   tabledata "Record Deletion Rel. Error" = rimd,
                   tabledata "Reminder/Fin. Charge Entry" = imd,
                   tabledata "Return Receipt Line" = imd,
@@ -689,6 +690,7 @@ codeunit 50000 "Record Deletion Mgt."
         RecordDeletionRelError: Record "Record Deletion Rel. Error";
         RecordRef: RecordRef;
         UpdateDialog: Dialog;
+        NoOfRecords: Integer;
         DeletingRecordsTxt: Label 'Deleting Records!\Table: #1#######', Comment = '%1 = Table ID';
     begin
         // Repeated here (not only in DeleteRecords) so the internal test hooks cannot bypass the guards.
@@ -704,13 +706,29 @@ codeunit 50000 "Record Deletion Mgt."
 
                 UpdateDialog.Update(1, Format(RecordDeletion."Table ID"));
                 RecordRef.Open(RecordDeletion."Table ID");
+                NoOfRecords := RecordRef.Count();
                 RecordRef.DeleteAll(RunTrigger);
                 RecordRef.Close();
+                InsertDeletionLog(RecordDeletion."Table ID", NoOfRecords, RunTrigger);
                 RecordDeletionRelError.SetRange("Table ID", RecordDeletion."Table ID");
                 RecordDeletionRelError.DeleteAll(true);
             until RecordDeletion.Next() = 0;
 
         UpdateDialog.Close();
+    end;
+
+    local procedure InsertDeletionLog(TableID: Integer; NoOfRecords: Integer; RunTrigger: Boolean)
+    var
+        RecordDeletionLog: Record "Record Deletion Log";
+    begin
+        if NoOfRecords = 0 then
+            exit;
+
+        RecordDeletionLog.Init();
+        RecordDeletionLog."Table ID" := TableID;
+        RecordDeletionLog."No. of Records" := NoOfRecords;
+        RecordDeletionLog."Run Trigger" := RunTrigger;
+        RecordDeletionLog.Insert(true);
     end;
 
     local procedure CheckDeletionAllowed()
@@ -753,8 +771,8 @@ codeunit 50000 "Record Deletion Mgt."
     // internal (not local) so the test app can verify the protection list directly
     internal procedure IsTableProtected(TableID: Integer): Boolean
     begin
-        // Deleting the tool's own tables would destroy the selection, the relation errors and every backup.
-        if TableID in [Database::"Record Deletion", Database::"Record Deletion Rel. Error", Database::"Table Backup"] then
+        // Deleting the tool's own tables would destroy the selection, the relation errors, the log and every backup.
+        if TableID in [Database::"Record Deletion", Database::"Record Deletion Log", Database::"Record Deletion Rel. Error", Database::"Table Backup"] then
             exit(true);
         exit(TableID >= SystemTableIdStart());
     end;

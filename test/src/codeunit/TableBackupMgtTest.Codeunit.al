@@ -133,6 +133,29 @@ codeunit 60000 "TableBackupMgt Test"
     end;
 
     [Test]
+    procedure CreateBackupWithFilterForSnapshotTypeDoesNotAssignSnapshotTableId()
+    var
+        TestBuffer: Record "Test Buffer";
+        TableBackup: Record "Table Backup";
+        EntryNo: Integer;
+    begin
+        // [GIVEN] A record and a filtered snapshot backup request
+        CreateTestBufferRecord('F101', 'First', 1, 1.1, true, 20260101D);
+        TestBuffer.SetFilter("Integer Value", '>=%1', 1);
+
+        // [WHEN] A filtered snapshot backup is created
+        EntryNo := TableBackupMgt.CreateBackupWithFilter(Database::"Test Buffer", Enum::"Backup Type"::Snapshot, Enum::"Backup Operation Type"::"Manual Backup", 'Filtered snapshot', TestBuffer.GetView(false), true);
+
+        // [THEN] The backup is stored as a snapshot without a snapshot table ID, as filtered snapshots always were
+        Assert.IsTrue(TableBackup.Get(EntryNo), 'Backup entry should exist.');
+        Assert.AreEqual(Enum::"Backup Type"::Snapshot.AsInteger(), TableBackup."Backup Type".AsInteger(), 'Unexpected backup type.');
+        Assert.AreEqual(0, TableBackup."Snapshot Table ID", 'A filtered snapshot should not reserve a snapshot table ID.');
+
+        TestBuffer.SetRange("Integer Value");
+        TestBuffer.DeleteAll(false);
+    end;
+
+    [Test]
     procedure CreateBackupWithSnapshotTypeAssignsSnapshotTableId()
     var
         TestBuffer: Record "Test Buffer";

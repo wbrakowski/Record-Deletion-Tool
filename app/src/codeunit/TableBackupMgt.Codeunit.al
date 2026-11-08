@@ -37,7 +37,9 @@ codeunit 50001 "Table Backup Mgt."
         RecordRef.Close();
 
         OpenBackupProgressDialog(ProgressDialog, TableBackup, 'Converting data to backup format...');
-        ExportBackupData(TableBackup, BackupTypeToUse, ProgressDialog);
+        if BackupTypeToUse = BackupTypeToUse::Snapshot then
+            AssignSnapshotTableId(TableBackup);
+        ExportTableToJSON(TableBackup, ProgressDialog);
         CloseProgressDialogIfAllowed(ProgressDialog);
 
         TableBackup.Modify(true);
@@ -73,7 +75,7 @@ codeunit 50001 "Table Backup Mgt."
         RecordRef.Close();
 
         OpenBackupProgressDialog(ProgressDialog, TableBackup, 'Converting filtered data to backup format...');
-        ExportBackupDataWithFilter(TableBackup, BackupTypeToUse, FilterView, ProgressDialog);
+        ExportTableToJSONWithFilter(TableBackup, FilterView, ProgressDialog);
         CloseProgressDialogIfAllowed(ProgressDialog);
 
         TableBackup.Modify(true);
@@ -122,30 +124,6 @@ codeunit 50001 "Table Backup Mgt."
     begin
         if GuiAllowed() then
             ProgressDialog.Close();
-    end;
-
-    local procedure ExportBackupData(var TableBackup: Record "Table Backup"; BackupTypeToUse: Enum "Backup Type"; var ProgressDialog: Dialog)
-    begin
-        case BackupTypeToUse of
-            BackupTypeToUse::"JSON Export":
-                ExportTableToJSON(TableBackup, ProgressDialog);
-            BackupTypeToUse::Snapshot:
-                CreateSnapshotTable(TableBackup, ProgressDialog);
-            BackupTypeToUse::"Full Backup":
-                CreateFullBackup(TableBackup, ProgressDialog);
-        end;
-    end;
-
-    local procedure ExportBackupDataWithFilter(var TableBackup: Record "Table Backup"; BackupTypeToUse: Enum "Backup Type"; FilterView: Text; var ProgressDialog: Dialog)
-    begin
-        case BackupTypeToUse of
-            BackupTypeToUse::"JSON Export":
-                ExportTableToJSONWithFilter(TableBackup, FilterView, ProgressDialog);
-            BackupTypeToUse::Snapshot:
-                CreateSnapshotTableWithFilter(TableBackup, FilterView, ProgressDialog);
-            BackupTypeToUse::"Full Backup":
-                CreateFullBackupWithFilter(TableBackup, FilterView, ProgressDialog);
-        end;
     end;
 
     local procedure ExportTableToJSON(var TableBackup: Record "Table Backup"; var ProgressDialog: Dialog)
@@ -315,34 +293,10 @@ codeunit 50001 "Table Backup Mgt."
         JSONObject.Add(FieldName, JSONValue);
     end;
 
-    local procedure CreateSnapshotTable(var TableBackup: Record "Table Backup"; var ProgressDialog: Dialog)
-    var
-        SnapshotTableId: Integer;
+    local procedure AssignSnapshotTableId(var TableBackup: Record "Table Backup")
     begin
-        // Create temporary copy using a naming convention
-        SnapshotTableId := GetNextSnapshotTableId();
-        TableBackup.Validate("Snapshot Table ID", SnapshotTableId);
-
-        // For simplicity, we store snapshots as JSON too (snapshot tables are complex to manage;
-        // in a real implementation, you might use temp tables or external storage instead)
-        ExportTableToJSON(TableBackup, ProgressDialog);
-    end;
-
-    local procedure CreateSnapshotTableWithFilter(var TableBackup: Record "Table Backup"; FilterView: Text; var ProgressDialog: Dialog)
-    begin
-        // For filtered snapshots, store as JSON with filter info
-        ExportTableToJSONWithFilter(TableBackup, FilterView, ProgressDialog);
-    end;
-
-    local procedure CreateFullBackup(var TableBackup: Record "Table Backup"; var ProgressDialog: Dialog)
-    begin
-        // Full backup is the same as JSON export for now
-        ExportTableToJSON(TableBackup, ProgressDialog);
-    end;
-
-    local procedure CreateFullBackupWithFilter(var TableBackup: Record "Table Backup"; FilterView: Text; var ProgressDialog: Dialog)
-    begin
-        ExportTableToJSONWithFilter(TableBackup, FilterView, ProgressDialog);
+        // Snapshots are stored as JSON like every other backup type; only the ID is reserved (nothing else is stored under it).
+        TableBackup.Validate("Snapshot Table ID", GetNextSnapshotTableId());
     end;
 
     internal procedure RestoreBackup(var TableBackup: Record "Table Backup")
@@ -354,12 +308,8 @@ codeunit 50001 "Table Backup Mgt."
         if not ConfirmManagement.GetResponseOrDefault(StrSubstNo(RestoreConfirmQst, TableBackup."No. of Records", TableBackup."Table Name"), false) then
             exit;
 
-        case TableBackup."Backup Type" of
-            TableBackup."Backup Type"::"JSON Export", TableBackup."Backup Type"::"Full Backup":
-                RestoreFromJSON(TableBackup);
-            TableBackup."Backup Type"::Snapshot:
-                RestoreFromSnapshot(TableBackup);
-        end;
+        // Every backup type is stored as JSON
+        RestoreFromJSON(TableBackup);
 
         // RestoreFromJSON already shows the appropriate result message (success or partial, via
         // ValidateRestoreResult) - showing another one here would just duplicate it.
@@ -663,12 +613,6 @@ codeunit 50001 "Table Backup Mgt."
             FieldRef.Value(CopyStr(FieldValue, 1, FieldRef.Length()))
         else
             FieldRef.Value(FieldValue);
-    end;
-
-    local procedure RestoreFromSnapshot(var TableBackup: Record "Table Backup")
-    begin
-        // Snapshots are stored as JSON, so restore from JSON
-        RestoreFromJSON(TableBackup);
     end;
 
     internal procedure ExportBackupToFile(var TableBackup: Record "Table Backup")

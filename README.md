@@ -12,6 +12,7 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 - Organized by functional areas (Finance, Sales, Purchase, Inventory, etc.)
 - Support for 200+ standard Business Central tables
 - Option to run with or without table triggers
+- **Deletion log**: every deletion is logged per table (number of records, trigger setting, user, time), see the "Deletion Log" action
 
 ### 🔍 Relationship Validation
 - Automatically checks table relationships before deletion
@@ -21,7 +22,7 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 
 ### 🛡️ Built-in Safeguards
 - **Production lock**: deletion is refused in a Business Central online **production** environment (sandboxes and on-premises installations are not blocked)
-- **Protected tables**: the tool's own tables (Record Deletion, Record Deletion Rel. Error, Table Backup) and system tables are never offered, suggested or deleted. If one of them is flagged anyway, the deletion stops before anything is touched
+- **Protected tables**: the tool's own tables (Record Deletion, Record Deletion Log, Record Deletion Rel. Error, Table Backup) and system tables are never offered, suggested or deleted. If one of them is flagged anyway, the deletion stops before anything is touched
 
 ### 💾 Comprehensive Backup System
 - **Automatic backup prompts** before deletion operations

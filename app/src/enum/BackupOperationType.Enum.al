@@ -22,9 +22,15 @@ enum 50000 "Backup Operation Type"
     value(3; "Before Modification")
     {
         Caption = 'Before Modification';
+        ObsoleteReason = 'Never used by the tool.';
+        ObsoleteState = Pending;
+        ObsoleteTag = '1.1.0.0';
     }
     value(4; "Scheduled Backup")
     {
         Caption = 'Scheduled Backup';
+        ObsoleteReason = 'Never used by the tool.';
+        ObsoleteState = Pending;
+        ObsoleteTag = '1.1.0.0';
     }
 }

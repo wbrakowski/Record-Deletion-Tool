@@ -11,6 +11,8 @@ permissionset 50000 "Record Deletion"
     Permissions =
         table "Record Deletion" = X,
         tabledata "Record Deletion" = RIMD,
+        table "Record Deletion Log" = X,
+        tabledata "Record Deletion Log" = RIMD,
         table "Record Deletion Rel. Error" = X,
         tabledata "Record Deletion Rel. Error" = RIMD,
         table "Table Backup" = X,
@@ -19,6 +21,7 @@ permissionset 50000 "Record Deletion"
         codeunit "Table Backup Mgt." = X,
         page "Create Table Backup" = X,
         page "Record Deletion" = X,
+        page "Record Deletion Log" = X,
         page "Record Deletion Rel. Error" = X,
         page "Table Backup Card" = X,
         page "Table Backup List" = X;

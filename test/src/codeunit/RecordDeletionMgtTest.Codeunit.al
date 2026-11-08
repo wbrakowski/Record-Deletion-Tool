@@ -122,6 +122,7 @@ codeunit 60001 "RecordDeletionMgt Test"
         TestBuffer: Record "Test Buffer";
         RecordDeletion: Record "Record Deletion";
         RecordDeletionRelError: Record "Record Deletion Rel. Error";
+        RecordDeletionLog: Record "Record Deletion Log";
     begin
         // [GIVEN] No other table is currently flagged for deletion - safety net so this test can never
         // delete real data left flagged by earlier interactive use of the tool in this environment.
@@ -144,6 +145,9 @@ codeunit 60001 "RecordDeletionMgt Test"
         RecordDeletionRelError."Entry No." := 1;
         RecordDeletionRelError.Insert(false);
 
+        RecordDeletionLog.SetRange("Table ID", Database::"Test Buffer");
+        RecordDeletionLog.DeleteAll(false);
+
         // [WHEN] Deletion is performed
         RecordDeletionMgt.PerformDeletion(false);
 
@@ -151,6 +155,44 @@ codeunit 60001 "RecordDeletionMgt Test"
         Assert.IsTrue(TestBuffer.IsEmpty(), 'Test buffer records should have been deleted.');
         RecordDeletionRelError.SetRange("Table ID", Database::"Test Buffer");
         Assert.IsTrue(RecordDeletionRelError.IsEmpty(), 'Relation errors for the deleted table should have been cleared.');
+
+        // [THEN] The deletion is logged with the number of deleted records
+        Assert.RecordCount(RecordDeletionLog, 1);
+        Assert.IsTrue(RecordDeletionLog.FindFirst(), 'A deletion log entry should exist.');
+        Assert.AreEqual(2, RecordDeletionLog."No. of Records", 'Unexpected number of deleted records in the log.');
+        Assert.IsFalse(RecordDeletionLog."Run Trigger", 'Run Trigger should be logged as false.');
+
+        RecordDeletionLog.DeleteAll(false);
+        DeleteRecordDeletionEntry(Database::"Test Buffer");
+    end;
+
+    [Test]
+    procedure PerformDeletionDoesNotLogTableWithoutRecords()
+    var
+        TestBuffer: Record "Test Buffer";
+        RecordDeletion: Record "Record Deletion";
+        RecordDeletionLog: Record "Record Deletion Log";
+    begin
+        // [GIVEN] No other table is currently flagged for deletion (same safety net as the other deletion test)
+        RecordDeletion.SetRange("Delete Records", true);
+        Assert.IsTrue(RecordDeletion.IsEmpty(), 'Aborting: another table is already flagged for deletion in this environment.');
+
+        // [GIVEN] An empty test table, flagged for deletion
+        TestBuffer.DeleteAll(false);
+        DeleteRecordDeletionEntry(Database::"Test Buffer");
+        CreateRecordDeletionEntry(Database::"Test Buffer");
+        Assert.IsTrue(RecordDeletion.Get(Database::"Test Buffer"), 'Record Deletion entry should exist.');
+        RecordDeletion."Delete Records" := true;
+        RecordDeletion.Modify(false);
+
+        RecordDeletionLog.SetRange("Table ID", Database::"Test Buffer");
+        RecordDeletionLog.DeleteAll(false);
+
+        // [WHEN] Deletion is performed
+        RecordDeletionMgt.PerformDeletion(false);
+
+        // [THEN] Nothing was deleted, so nothing is logged
+        Assert.IsTrue(RecordDeletionLog.IsEmpty(), 'A table without records should not be logged.');
 
         DeleteRecordDeletionEntry(Database::"Test Buffer");
     end;
@@ -364,6 +406,7 @@ codeunit 60001 "RecordDeletionMgt Test"
         // [WHEN/THEN] The tool's own tables and the system table range are protected from deletion
         Assert.IsTrue(RecordDeletionMgt.IsTableProtected(Database::"Record Deletion"), 'Record Deletion should be protected.');
         Assert.IsTrue(RecordDeletionMgt.IsTableProtected(Database::"Record Deletion Rel. Error"), 'Record Deletion Rel. Error should be protected.');
+        Assert.IsTrue(RecordDeletionMgt.IsTableProtected(Database::"Record Deletion Log"), 'Record Deletion Log should be protected.');
         Assert.IsTrue(RecordDeletionMgt.IsTableProtected(Database::"Table Backup"), 'Table Backup should be protected.');
         Assert.IsTrue(RecordDeletionMgt.IsTableProtected(2000000000), 'System tables should be protected.');
     end;
