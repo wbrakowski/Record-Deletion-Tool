@@ -237,6 +237,89 @@ codeunit 60001 "RecordDeletionMgt Test"
         TestBufferA.DeleteAll(false);
     end;
 
+    [Test]
+    procedure IsTableProtectedReturnsTrueForToolAndSystemTables()
+    begin
+        // [WHEN/THEN] The tool's own tables and the system table range are protected from deletion
+        Assert.IsTrue(RecordDeletionMgt.IsTableProtected(Database::"Record Deletion"), 'Record Deletion should be protected.');
+        Assert.IsTrue(RecordDeletionMgt.IsTableProtected(Database::"Record Deletion Rel. Error"), 'Record Deletion Rel. Error should be protected.');
+        Assert.IsTrue(RecordDeletionMgt.IsTableProtected(Database::"Table Backup"), 'Table Backup should be protected.');
+        Assert.IsTrue(RecordDeletionMgt.IsTableProtected(2000000000), 'System tables should be protected.');
+    end;
+
+    [Test]
+    procedure IsTableProtectedReturnsFalseForOtherTables()
+    begin
+        // [WHEN/THEN] Ordinary application tables are not protected
+        Assert.IsFalse(RecordDeletionMgt.IsTableProtected(Database::"Test Buffer"), 'Test Buffer should not be protected.');
+        Assert.IsFalse(RecordDeletionMgt.IsTableProtected(1999999999), 'The last ID below the system range should not be protected.');
+    end;
+
+    [Test]
+    procedure SetSuggestedTableIgnoresProtectedTable()
+    var
+        RecordDeletion: Record "Record Deletion";
+    begin
+        // [GIVEN] A Record Deletion entry for one of the tool's own tables (e.g. left over from an older version)
+        DeleteRecordDeletionEntry(Database::"Table Backup");
+        CreateRecordDeletionEntry(Database::"Table Backup");
+
+        // [WHEN] The protected table is suggested for deletion
+        RecordDeletionMgt.SetSuggestedTable(Database::"Table Backup");
+
+        // [THEN] It is not flagged
+        Assert.IsTrue(RecordDeletion.Get(Database::"Table Backup"), 'Record Deletion entry should still exist.');
+        Assert.IsFalse(RecordDeletion."Delete Records", 'A protected table must never be flagged for deletion.');
+
+        DeleteRecordDeletionEntry(Database::"Table Backup");
+    end;
+
+    [Test]
+    procedure PerformDeletionErrorsWhenProtectedTableIsFlagged()
+    var
+        TestBuffer: Record "Test Buffer";
+        RecordDeletion: Record "Record Deletion";
+        ErrorText: Text;
+    begin
+        // [GIVEN] No other table is currently flagged for deletion - same safety net as the other PerformDeletion test
+        RecordDeletion.SetRange("Delete Records", true);
+        Assert.IsTrue(RecordDeletion.IsEmpty(), 'Aborting: another table is already flagged for deletion in this environment.');
+
+        // [GIVEN] A deletable table and a protected table are both flagged (the protected flag set directly, bypassing SetSuggestedTable)
+        TestBuffer.DeleteAll(false);
+        InsertTestBufferRecord('X001');
+        DeleteRecordDeletionEntry(Database::"Test Buffer");
+        CreateRecordDeletionEntry(Database::"Test Buffer");
+        FlagRecordDeletionEntry(Database::"Test Buffer");
+
+        DeleteRecordDeletionEntry(Database::"Table Backup");
+        CreateRecordDeletionEntry(Database::"Table Backup");
+        FlagRecordDeletionEntry(Database::"Table Backup");
+
+        // [WHEN] Deletion is performed
+        asserterror RecordDeletionMgt.PerformDeletion(false);
+        ErrorText := GetLastErrorText();
+
+        // [THEN] The protection error names the protected table only (asserterror rolls back any writes of the
+        // failed call, so the error text is the only observable outcome)
+        Assert.ExpectedError('belong to the Record Deletion Tool or to the system and cannot be deleted');
+        Assert.IsTrue(ErrorText.Contains('Table Backup'), 'The error should list the protected table.');
+        Assert.IsFalse(ErrorText.Contains('Test Buffer'), 'The error should not list the deletable table.');
+
+        TestBuffer.DeleteAll(false);
+        DeleteRecordDeletionEntry(Database::"Test Buffer");
+        DeleteRecordDeletionEntry(Database::"Table Backup");
+    end;
+
+    local procedure FlagRecordDeletionEntry(TableID: Integer)
+    var
+        RecordDeletion: Record "Record Deletion";
+    begin
+        Assert.IsTrue(RecordDeletion.Get(TableID), 'Record Deletion entry should exist before flagging it.');
+        RecordDeletion."Delete Records" := true;
+        RecordDeletion.Modify(false);
+    end;
+
     local procedure CreateRecordDeletionEntry(TableID: Integer)
     var
         RecordDeletion: Record "Record Deletion";

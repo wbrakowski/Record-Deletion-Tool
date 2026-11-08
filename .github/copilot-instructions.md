@@ -30,11 +30,16 @@ Business Central AL extension (v29.0, Cloud target) that enables bulk deletion o
 
 ### Key Data Flow Pattern
 ```
-User Action → InsertUpdateTables() → Populates Record Deletion table
+User Action → InsertUpdateTables() → Populates Record Deletion table (skips protected tables, see below)
            → SuggestRecordsToDelete() → Sets "Delete Records" flags (11 helper procedures by BC area)
            → CheckTableRelations() → Validates foreign keys → Logs errors
-           → DeleteRecords(RunTrigger) → AskForBackup() → CreateBackupsForDeletion() → PerformDeletion()
+           → DeleteRecords(RunTrigger) → CheckDeletionAllowed() → AskForBackup() → CreateBackupsForDeletion() → PerformDeletion()
 ```
+
+### Deletion Guards (`CheckDeletionAllowed`)
+- Runs at the start of `DeleteRecords` (before any dialog) and again inside `CreateBackupsForDeletion` and `PerformDeletion`, so the `internal` test hooks cannot bypass it.
+- `CheckNotProductionEnvironment`: errors when `Environment Information`.`IsSaaS()` and `IsProduction()`. On-premises installations cannot be told apart, so they are never blocked.
+- `CheckFlaggedTablesAreDeletable`: errors (listing the tables) if any flagged table is protected. `IsTableProtected(TableID)` covers the tool's own tables (`Record Deletion`, `Record Deletion Rel. Error`, `Table Backup`) and the system range (`>= 2000000000`, see `SystemTableIdStart`). `InsertUpdateTables` and `SetSuggestedTable` skip protected tables as well.
 
 ## AL-Specific Patterns
 
@@ -143,6 +148,7 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 - `RecordDeletionMgt.CheckTableRelationsForTable` (was `local`) — exercised by `CheckTableRelations()` normally.
 - `RecordDeletionMgt.PerformDeletion` (was `local`) — exercised by `DeleteRecords()` normally.
 - `RecordDeletionMgt.CreateBackupsForDeletion` (was `local`) — exercised by `DeleteRecords()` normally.
+- `RecordDeletionMgt.IsTableProtected` — pure predicate, exposed so the protection list can be asserted directly.
 
 **Safety guard for destructive tests**: `PerformDeletion` and `CreateBackupsForDeletion` iterate over **every** `"Record Deletion"` row with `Delete Records = true`, not just the test's own row. A test calling them directly could delete real data if the sandbox already has other tables flagged from earlier interactive use of the tool. Tests for these two procedures therefore start with:
   ```al
@@ -152,12 +158,13 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
   before setting up their own test data. Apply this same guard to any new test that calls one of these two procedures.
 
 - `test/src/table/TestBuffer.Table.al` (id 60000) is the shared dummy table for both test codeunits. It intentionally carries extra fields beyond simple round-trip data so relation-check tests have something to exercise: `"Related No."` (Code, self `TableRelation` to `"No."`) and `"Related System ID"` (Guid, self `TableRelation` to `SystemId`) — used to verify `CheckTableRelationsForTable` detects both Code-based and GUID-based dangling references while ignoring valid/blank ones.
-- Current test codeunits: `TableBackupMgtTest` (id 60000) covers all 3 backup types (JSON Export, Snapshot, Full Backup), filtered backups, full round-trip restore across every field type (Integer/Decimal/Boolean/Date/Time/DateTime/Guid/Text), culture-invariant storage (stored JSON uses Format 9 text), locale-sensitive round-trip and legacy-value fallback on restore, `ViewBackupData`/`ExportBackupToFile` error guards (via `asserterror`), and `DeleteSnapshotTable`. `RecordDeletionMgtTest` (id 60001) covers `SetSuggestedTable`, `ClearRecordsToDelete`, `CalcRecordsInTable`, `CheckTableRelationsForTable` (Code and GUID relation errors), `PerformDeletion`, and `CreateBackupsForDeletion`.
+- Current test codeunits: `TableBackupMgtTest` (id 60000) covers all 3 backup types (JSON Export, Snapshot, Full Backup), filtered backups, full round-trip restore across every field type (Integer/Decimal/Boolean/Date/Time/DateTime/Guid/Text), culture-invariant storage (stored JSON uses Format 9 text), locale-sensitive round-trip and legacy-value fallback on restore, `ViewBackupData`/`ExportBackupToFile` error guards (via `asserterror`), and `DeleteSnapshotTable`. `RecordDeletionMgtTest` (id 60001) covers `SetSuggestedTable` (incl. ignoring protected tables), `ClearRecordsToDelete`, `CalcRecordsInTable`, `CheckTableRelationsForTable` (Code and GUID relation errors), `PerformDeletion` (incl. the protected-table error), `CreateBackupsForDeletion`, and `IsTableProtected`.
 - **Deliberately NOT covered**, with reasons — don't attempt to test these without discussing the tradeoff first:
   - `InsertUpdateTables()`, `SuggestRecordsToDelete()`, all 11 `SetSuggestedXTables()` helpers — scan/flag every table in the environment or a large hardcoded list; too slow/environment-dependent for a unit test.
   - `SuggestUnlicensedPartnerOrCustomRecordsToDelete`, `IsRecordInLicense`, `IsRecordStandardTable` — depend on the environment's license/permission data, not deterministic.
   - `DeleteRecords()`, `RestoreBackup()` (the public, confirm-gated entry points) — thin orchestration already covered by testing their internal building blocks directly.
   - `ViewRecords` — just calls `Hyperlink()`, nothing to assert.
+  - `CheckNotProductionEnvironment` — `IsProduction()` is always `false` where tests run (sandbox), the blocking branch cannot be reached.
   - The "dual primary key" fallback branch in `GetPrimaryKeyFieldRef` and the `SystemCreatedBy`/`SystemModifiedBy` skip branch in `CheckFieldRelation` — not reliably forceable/verifiable without live test execution (see session notes if picking this up).
   - The real `DownloadFromStream` success path in `ExportBackupToFile` — only the `Error(NoBackupDataErr)` guard clause is tested; behavior of an actual client download when `GuiAllowed()` is `false` wasn't empirically verified.
 - **AL test pitfall**: inserting a record and then immediately calling code that does `CalcFields` on a Blob field (e.g. `ViewBackupData`, `ExportBackupToFile`) can fail with "The X does not exist" even though the row was just inserted — `Get()`/`Find()` right after `Insert()` do NOT fix this. Call `Commit();` right after `Insert()` before invoking the code under test. Whenever a test calls `Commit()`, it MUST also carry `[TransactionModel(TransactionModel::AutoCommit)]` on the `[Test]` procedure (default test transaction model is `AutoRollback`, which doesn't match a test that commits) — and still manually clean up the row afterwards, since `Commit()` breaks the automatic rollback isolation for that data.

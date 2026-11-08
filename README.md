@@ -19,6 +19,10 @@ A powerful Business Central AL extension that enables safe bulk deletion of reco
 - Displays validation errors for review before proceeding
 - Prevents accidental data integrity issues
 
+### 🛡️ Built-in Safeguards
+- **Production lock**: deletion is refused in a Business Central online **production** environment (sandboxes and on-premises installations are not blocked)
+- **Protected tables**: the tool's own tables (Record Deletion, Record Deletion Rel. Error, Table Backup) and system tables are never offered, suggested or deleted. If one of them is flagged anyway, the deletion stops before anything is touched
+
 ### 💾 Comprehensive Backup System
 - **Automatic backup prompts** before deletion operations
 - **Three backup types**: JSON Export, Snapshot, Full Backup (Snapshot and Full Backup currently use the same JSON-based storage as JSON Export)
@@ -173,6 +177,9 @@ A: Check that the table structure hasn't changed since the backup was created. S
 
 **Q: "A field is empty after restoring a backup"**  
 A: Fields with unsupported types (BLOB, Media, MediaSet, RecordID, etc.) are skipped during backup and cannot be restored. This is expected for any table containing such fields.
+
+**Q: "Records cannot be deleted in a production environment"**  
+A: By design. The tool refuses to delete in a Business Central online production environment. Use a sandbox (for example a copy of production) instead.
 
 **Q: "Deletion is very slow"**  
 A: Use "Delete Records (without Trigger)" for faster deletion. Triggers can significantly slow down bulk operations.
