@@ -44,7 +44,7 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 
 ### RecordRef/FieldRef Dynamic Operations
 - Use `RecordRef.Open(TableID)` for dynamic table access
-- Use `RecordRef.ReadIsolation(IsolationLevel::UpdLock)` instead of deprecated `LockTable()`
+- Use `RecordRef.ReadIsolation(...)` instead of deprecated `LockTable()`; pick the weakest level that fits (`ReadUncommitted` for display-only counts such as `CalcRecordsInTable`, `UpdLock` only when the rows are about to be modified)
 - Always check `Get()` return values: `if not KeyRec.Get(...) then Error(...)`
 - Set RunTrigger explicitly on all Insert/Modify/Delete operations: `.Insert(true)`, `.DeleteAll(false)`
 
@@ -152,7 +152,7 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
   before setting up their own test data. Apply this same guard to any new test that calls one of these two procedures.
 
 - `test/src/table/TestBuffer.Table.al` (id 60000) is the shared dummy table for both test codeunits. It intentionally carries extra fields beyond simple round-trip data so relation-check tests have something to exercise: `"Related No."` (Code, self `TableRelation` to `"No."`) and `"Related System ID"` (Guid, self `TableRelation` to `SystemId`) — used to verify `CheckTableRelationsForTable` detects both Code-based and GUID-based dangling references while ignoring valid/blank ones.
-- Current test codeunits: `TableBackupMgtTest` (id 60000) covers all 3 backup types (JSON Export, Snapshot, Full Backup), filtered backups, full round-trip restore across every field type (Integer/Decimal/Boolean/Date/Time/DateTime/Guid/Text), `ViewBackupData`/`ExportBackupToFile` error guards (via `asserterror`), and `DeleteSnapshotTable`. `RecordDeletionMgtTest` (id 60001) covers `SetSuggestedTable`, `ClearRecordsToDelete`, `CalcRecordsInTable`, `CheckTableRelationsForTable` (Code and GUID relation errors), `PerformDeletion`, and `CreateBackupsForDeletion`.
+- Current test codeunits: `TableBackupMgtTest` (id 60000) covers all 3 backup types (JSON Export, Snapshot, Full Backup), filtered backups, full round-trip restore across every field type (Integer/Decimal/Boolean/Date/Time/DateTime/Guid/Text), culture-invariant storage (stored JSON uses Format 9 text), locale-sensitive round-trip and legacy-value fallback on restore, `ViewBackupData`/`ExportBackupToFile` error guards (via `asserterror`), and `DeleteSnapshotTable`. `RecordDeletionMgtTest` (id 60001) covers `SetSuggestedTable`, `ClearRecordsToDelete`, `CalcRecordsInTable`, `CheckTableRelationsForTable` (Code and GUID relation errors), `PerformDeletion`, and `CreateBackupsForDeletion`.
 - **Deliberately NOT covered**, with reasons — don't attempt to test these without discussing the tradeoff first:
   - `InsertUpdateTables()`, `SuggestRecordsToDelete()`, all 11 `SetSuggestedXTables()` helpers — scan/flag every table in the environment or a large hardcoded list; too slow/environment-dependent for a unit test.
   - `SuggestUnlicensedPartnerOrCustomRecordsToDelete`, `IsRecordInLicense`, `IsRecordStandardTable` — depend on the environment's license/permission data, not deterministic.
@@ -174,8 +174,8 @@ User Action → InsertUpdateTables() → Populates Record Deletion table
 
 ### JSON Serialization (TableBackupMgt)
 - Only Normal class fields, skip BLOB fields and Obsolete fields
-- Format() used for all field values (handles type conversion)
-- Restore uses type-specific Evaluate() with fallback to text assignment
+- Text/Code values are written verbatim; every other supported type is written culture-invariant with `Format(Value, 0, 9)` (decimal with dot and no group separators, date as `yyyy-MM-dd`, DateTime as UTC, option/enum as ordinal) so a backup created under one regional setting restores under another
+- Restore uses type-specific `Evaluate(Var, Text, 9)` first and falls back to plain `Evaluate(Var, Text)` for legacy backups written before invariant serialization (known limitation: a legacy decimal like `"1.234"` meaning 1234 in a dot-grouping locale is valid Format 9 and is read as 1.234)
 - Progress dialogs update every 100 records (mod 100 check)
 
 ### Table Suggestion Organization

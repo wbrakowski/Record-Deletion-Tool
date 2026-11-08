@@ -402,6 +402,120 @@ codeunit 60000 "TableBackupMgt Test"
         TestBuffer.DeleteAll(false);
     end;
 
+    [Test]
+    procedure BackupAndRestoreRoundTripPreservesLocaleSensitiveValues()
+    var
+        TestBuffer: Record "Test Buffer";
+        TableBackup: Record "Table Backup";
+        ExpectedGuid: Guid;
+        ExpectedDateTime: DateTime;
+        EntryNo: Integer;
+    begin
+        // [GIVEN] A record whose values render differently depending on the regional settings
+        // (group/decimal separators, date order, 12/24h clock). This test pins the Format 9 to
+        // Evaluate 9 symmetry for every such type; CreateBackupStoresValuesInCultureInvariantFormat
+        // pins the stored representation itself, because a session cannot switch its region here.
+        TestBuffer.DeleteAll(false);
+        ExpectedGuid := CreateGuid();
+        ExpectedDateTime := CreateDateTime(20261231D, 235958T);
+
+        TestBuffer.Init();
+        TestBuffer."No." := 'L001';
+        TestBuffer."Decimal Value" := -1234567.89;
+        TestBuffer."Date Value" := 20260201D;
+        TestBuffer."Time Value" := 134507T;
+        TestBuffer."DateTime Value" := ExpectedDateTime;
+        TestBuffer."Guid Value" := ExpectedGuid;
+        TestBuffer.Insert(false);
+
+        // [GIVEN] A JSON export backup of the source table, and the source record deleted afterwards
+        EntryNo := TableBackupMgt.CreateBackup(Database::"Test Buffer", Enum::"Backup Type"::"JSON Export", Enum::"Backup Operation Type"::"Manual Backup", 'Locale round-trip backup', true);
+        TestBuffer.DeleteAll(false);
+
+        // [WHEN] The backup is restored directly
+        Assert.IsTrue(TableBackup.Get(EntryNo), 'Backup entry should exist.');
+        TableBackupMgt.RestoreFromJSON(TableBackup);
+
+        // [THEN] Every locale-sensitive value is restored bit-for-bit
+        Assert.IsTrue(TestBuffer.Get('L001'), 'Record L001 should exist after restore.');
+        Assert.AreEqual(-1234567.89, TestBuffer."Decimal Value", 'Decimal Value does not match.');
+        Assert.AreEqual(20260201D, TestBuffer."Date Value", 'Date Value does not match.');
+        Assert.AreEqual(134507T, TestBuffer."Time Value", 'Time Value does not match.');
+        Assert.AreEqual(ExpectedDateTime, TestBuffer."DateTime Value", 'DateTime Value does not match.');
+        Assert.AreEqual(ExpectedGuid, TestBuffer."Guid Value", 'Guid Value does not match.');
+
+        TestBuffer.DeleteAll(false);
+        TableBackup.Delete(false);
+    end;
+
+    [Test]
+    procedure CreateBackupStoresValuesInCultureInvariantFormat()
+    var
+        TestBuffer: Record "Test Buffer";
+        TableBackup: Record "Table Backup";
+        InStream: InStream;
+        JSONText: Text;
+        EntryNo: Integer;
+    begin
+        // [GIVEN] A record with a decimal (fraction and thousands), a date and a boolean value
+        TestBuffer.DeleteAll(false);
+        CreateTestBufferRecord('I001', 'Invariant', 7, 1234567.89, true, 20260201D);
+
+        // [WHEN] A JSON export backup is created
+        EntryNo := TableBackupMgt.CreateBackup(Database::"Test Buffer", Enum::"Backup Type"::"JSON Export", Enum::"Backup Operation Type"::"Manual Backup", 'Invariant format backup', true);
+
+        // [THEN] The stored JSON uses the culture-invariant representation (Format 9), not the user's regional format
+        Assert.IsTrue(TableBackup.Get(EntryNo), 'Backup entry should exist.');
+        TableBackup.CalcFields("Backup Data");
+        TableBackup."Backup Data".CreateInStream(InStream, TextEncoding::UTF8);
+        InStream.ReadText(JSONText);
+
+        Assert.IsTrue(JSONText.Contains('"Decimal Value":"1234567.89"'), 'Decimal should be stored with a dot and without group separators. JSON: ' + JSONText);
+        Assert.IsTrue(JSONText.Contains('"Date Value":"2026-02-01"'), 'Date should be stored as yyyy-MM-dd. JSON: ' + JSONText);
+        Assert.IsTrue(JSONText.Contains('"Boolean Value":"true"'), 'Boolean should be stored as the invariant literal true. JSON: ' + JSONText);
+
+        TestBuffer.DeleteAll(false);
+        TableBackup.Delete(false);
+    end;
+
+    [Test]
+    procedure RestoreFromJSONStillReadsLegacyRegionalValues()
+    var
+        TestBuffer: Record "Test Buffer";
+        TableBackup: Record "Table Backup";
+        OutStream: OutStream;
+        JSONText: Text;
+    begin
+        // [GIVEN] A backup written by a version before invariant serialization: values are in the
+        // regional format of the user who created it. "Yes" is rejected by the invariant (Format 9)
+        // parser and only readable through the fallback; like the Assert.ExpectedError texts in this
+        // suite, it assumes an English session language.
+        TestBuffer.DeleteAll(false);
+        JSONText := '[{"No.":"LEG01","Description":"Legacy","Integer Value":"42","Decimal Value":"42","Boolean Value":"Yes"}]';
+
+        TableBackup.Init();
+        TableBackup."Table ID" := Database::"Test Buffer";
+        TableBackup."Backup Type" := TableBackup."Backup Type"::"JSON Export";
+        TableBackup."No. of Records" := 1;
+        TableBackup.Insert(true);
+        TableBackup."Backup Data".CreateOutStream(OutStream, TextEncoding::UTF8);
+        OutStream.WriteText(JSONText);
+        TableBackup.Modify(true);
+
+        // [WHEN] The legacy backup is restored
+        TableBackupMgt.RestoreFromJSON(TableBackup);
+
+        // [THEN] "Yes" (not an invariant boolean literal) is still restored via the fallback; the numeric
+        // values are valid in both representations and must simply come through unchanged
+        Assert.IsTrue(TestBuffer.Get('LEG01'), 'Legacy record should be restored.');
+        Assert.AreEqual(42, TestBuffer."Integer Value", 'Integer Value does not match.');
+        Assert.AreEqual(42, TestBuffer."Decimal Value", 'Decimal Value does not match.');
+        Assert.IsTrue(TestBuffer."Boolean Value", 'Boolean Value "Yes" should be restored via the legacy fallback.');
+
+        TestBuffer.DeleteAll(false);
+        TableBackup.Delete(false);
+    end;
+
     local procedure CreateTestBufferRecord(No: Code[20]; Description: Text[100]; IntegerValue: Integer; DecimalValue: Decimal; BooleanValue: Boolean; DateValue: Date)
     var
         TestBuffer: Record "Test Buffer";
