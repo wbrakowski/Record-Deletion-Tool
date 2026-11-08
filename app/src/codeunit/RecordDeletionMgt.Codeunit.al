@@ -799,14 +799,11 @@ codeunit 50000 "Record Deletion Mgt."
     // internal (not local) so the test app can exercise the relation check for a single table directly, without the confirm dialog
     internal procedure CheckTableRelationsForTable(TableID: Integer)
     var
-        TableMetadata: Record "Table Metadata";
         TempRelationField: Record Field temporary;
         RecordRef: RecordRef;
     begin
         // Only allow "normal" tables to avoid errors, Skip TableType MicrosoftGraph and CRM etc.
-        TableMetadata.SetRange(ID, TableID);
-        TableMetadata.SetRange(TableType, TableMetadata.TableType::Normal);
-        if TableMetadata.IsEmpty() then
+        if not IsNormalTable(TableID) then
             exit;
 
         CollectRelationFields(TableID, TempRelationField);
@@ -818,6 +815,15 @@ codeunit 50000 "Record Deletion Mgt."
         RecordRef.Close();
     end;
 
+    local procedure IsNormalTable(TableID: Integer): Boolean
+    var
+        TableMetadata: Record "Table Metadata";
+    begin
+        TableMetadata.SetRange(ID, TableID);
+        TableMetadata.SetRange(TableType, TableMetadata.TableType::Normal);
+        exit(not TableMetadata.IsEmpty());
+    end;
+
     // Loads the relevant field metadata once per table into a temporary buffer, instead of re-querying
     // the Field system table for every single data record (major performance gain on large tables).
     local procedure CollectRelationFields(TableID: Integer; var TempRelationField: Record Field temporary)
@@ -827,7 +833,7 @@ codeunit 50000 "Record Deletion Mgt."
         Field.SetRange(TableNo, TableID);
         Field.SetRange(Class, Field.Class::Normal);
         Field.SetRange(ObsoleteState, Field.ObsoleteState::No);
-        Field.SetFilter(RelationTableNo, '<>0');
+        Field.SetFilter(RelationTableNo, '1..%1', SystemTableIdStart() - 1); // system tables cannot be opened with the Cloud target
 
         // Next 2 lines look funny but are needed to avoid this error:
         // "Table connection for table type CRM must be registered using RegisterTableConnection or cmdlet New-NAVTableConnection before it can be used"
@@ -857,8 +863,7 @@ codeunit 50000 "Record Deletion Mgt."
         FieldRef: FieldRef;
         FieldRef2: FieldRef;
     begin
-        // Skip system audit fields: they reference a reserved system user with no matching User record
-        if Field."No." in [2000000002, 2000000004] then // SystemCreatedBy, SystemModifiedBy
+        if not IsRelationCheckable(Field) then
             exit;
 
         RecordRef2.Open(Field.RelationTableNo);
@@ -877,13 +882,23 @@ codeunit 50000 "Record Deletion Mgt."
         RecordRef2.Close();
     end;
 
+    local procedure IsRelationCheckable(Field: Record Field): Boolean
+    begin
+        // Skip system audit fields: they reference a reserved system user with no matching User record
+        if Field."No." in [2000000002, 2000000004] then // SystemCreatedBy, SystemModifiedBy
+            exit(false);
+
+        // Same rule as for the source table: CRM, Graph and other non-normal targets cannot be opened
+        exit(IsNormalTable(Field.RelationTableNo));
+    end;
+
     local procedure ResolveRelationFieldRef(Field: Record Field; var RecordRef2: RecordRef; var FieldRef2: FieldRef): Boolean
     begin
         if Field.RelationFieldNo <> 0 then begin
             FieldRef2 := RecordRef2.Field(Field.RelationFieldNo);
             exit(true);
         end;
-        exit(GetPrimaryKeyFieldRef(Field.RelationTableNo, RecordRef2, FieldRef2));
+        exit(GetPrimaryKeyFieldRef(RecordRef2, FieldRef2));
     end;
 
     local procedure CheckFieldRelationForRecord(var RecordRef: RecordRef; var FieldRef: FieldRef; var RecordRef2: RecordRef; var FieldRef2: FieldRef)
@@ -907,23 +922,16 @@ codeunit 50000 "Record Deletion Mgt."
         exit((Format(FieldRef.Value()) = '') or (Format(FieldRef.Value()) = '0'));
     end;
 
-    local procedure GetPrimaryKeyFieldRef(TableNo: Integer; var RecordRef2: RecordRef; var FieldRef2: FieldRef): Boolean
+    local procedure GetPrimaryKeyFieldRef(var RecordRef2: RecordRef; var FieldRef2: FieldRef): Boolean
     var
-        Field2: Record Field;
-        KeyRec: Record "Key";
-        CouldNotGetKeyErr: Label 'Could not get key for table %1', Comment = '%1 = Table ID';
+        PrimaryKeyRef: KeyRef;
     begin
-        KeyRec.SetLoadFields(Key);
-        if not KeyRec.Get(TableNo, 1) then  // PK
-            Error(CouldNotGetKeyErr, TableNo);
-
-        Field2.SetRange(TableNo, TableNo);
-        Field2.SetFilter(FieldName, CopyStr(KeyRec.Key, 1, 30));
-        Field2.SetLoadFields("No.");
-        if not Field2.FindFirst() then // No Match if Dual PK
+        PrimaryKeyRef := RecordRef2.KeyIndex(1);
+        // A composite primary key cannot be matched against a single value
+        if PrimaryKeyRef.FieldCount() <> 1 then
             exit(false);
 
-        FieldRef2 := RecordRef2.Field(Field2."No.");
+        FieldRef2 := PrimaryKeyRef.FieldIndex(1);
         exit(true);
     end;
 

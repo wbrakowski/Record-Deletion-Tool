@@ -1,6 +1,7 @@
 namespace RecordDeletionTool.Test;
 
 using RecordDeletionTool;
+using System.Reflection;
 
 table 60000 "Test Buffer"
 {
@@ -81,6 +82,24 @@ table 60000 "Test Buffer"
         {
             Caption = 'Media Value';
             ToolTip = 'Specifies a Media value, used to test that a table with a Media field on every record can still be fully backed up and restored.';
+        }
+        field(15; "Related PK No."; Code[20])
+        {
+            Caption = 'Related PK No.';
+            TableRelation = "Test Buffer";
+            ToolTip = 'Specifies a related test buffer record by primary key, used to test relation checks without an explicit target field.';
+        }
+        field(16; "Related Special PK No."; Code[20])
+        {
+            Caption = 'Related Special PK No.';
+            TableRelation = "Test PK Target";
+            ToolTip = 'Specifies a related test PK target record, used to test relation checks against a primary key whose name contains filter special characters.';
+        }
+        field(17; "Related Metadata ID"; Integer)
+        {
+            Caption = 'Related Metadata ID';
+            TableRelation = "Table Metadata".ID;
+            ToolTip = 'Specifies a table ID with a relation to a system table, used to test that relations to system tables are not checked.';
         }
     }
 
